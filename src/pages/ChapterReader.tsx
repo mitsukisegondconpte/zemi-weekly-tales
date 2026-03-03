@@ -1,10 +1,21 @@
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useChapter, useChapters } from "@/hooks/useNovels";
 
 const ChapterReader = () => {
   const { novelId, chapterId } = useParams();
+  const navigate = useNavigate();
+  const { data: chapter, isLoading } = useChapter(chapterId);
+  const { data: allChapters = [] } = useChapters(novelId);
+
+  if (isLoading) return <div className="min-h-screen flex items-center justify-center bg-background"><p className="text-muted-foreground">Chajman...</p></div>;
+  if (!chapter) return <div className="min-h-screen flex items-center justify-center bg-background"><p className="text-muted-foreground">Chapit pa jwenn</p></div>;
+
+  const currentIndex = allChapters.findIndex(c => c.id === chapterId);
+  const prevChapter = currentIndex > 0 ? allChapters[currentIndex - 1] : null;
+  const nextChapter = currentIndex < allChapters.length - 1 ? allChapters[currentIndex + 1] : null;
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -16,43 +27,39 @@ const ChapterReader = () => {
           </Link>
 
           <div className="mb-8">
-            <span className="text-xs font-semibold uppercase tracking-widest text-primary">Chapit 1</span>
-            <h1 className="text-3xl font-black font-serif text-foreground mt-1">Kòmansman</h1>
+            <span className="text-xs font-semibold uppercase tracking-widest text-primary">Chapit {chapter.chapter_number}</span>
+            <h1 className="text-3xl font-black font-serif text-foreground mt-1">{chapter.title}</h1>
           </div>
 
           <article className="prose prose-lg max-w-none text-foreground leading-relaxed space-y-4">
-            <p>
-              Lè solèy la te kòmanse desann dèyè mòn yo, Mari te kanpe sou galri kay la. Li t ap gade wout la ki mennen nan vil la, yon wout ki te plen pousyè ak istwa ki pa janm rakonte.
-            </p>
-            <p>
-              Li te konnen jou sa a t ap diferan. Yon bagay nan lè a te chanje — tankou yon pwomès ki t ap vin vre, oswa yon danje ki t ap pwoche dousman tankou yon lonbraj nan mitan laprèmidi.
-            </p>
-            <p>
-              "Mari!" Grann li te rele l depi anndan kay la. Vwa l te gen yon vibrasyon espesyal — pa laperèz egzakteman, men yon bagay ki te pwòch.
-            </p>
-            <p>
-              Li te retounen anndan, kote flanm chandelye a te danse sou mi an. Grann li te chita bò tab la, men sa k te fè l sezi se sa ki te sou tab la: yon ansyen liv avèk yon kouvèti an kwi ki te parèt tankou li te gen dè santèn ane.
-            </p>
-            <p>
-              "Sa a," Grann li te di, vwa l te desann tankou yon soupir, "se eritaj ou. Mwen te kenbe l pou ou depi lè ou te fèt. Kounye a, li lè pou ou konnen verite a."
-            </p>
-            <p>
-              Mari te lonje men l pou l manyen liv la. Kou dwèt li te touche kwi a, li te santi yon chalè ki te monte nan bra l — pa yon chalè dezagreyab, men yon chalè ki te sanble tankou li te rekonèt li, tankou liv la te konnen se li ki mèt li.
-            </p>
+            {chapter.content.split("\n").map((paragraph, i) => (
+              paragraph.trim() ? <p key={i}>{paragraph}</p> : null
+            ))}
           </article>
 
           {/* Navigation */}
           <div className="flex items-center justify-between mt-12 pt-6 border-t border-border">
-            <button className="inline-flex items-center gap-1 px-4 py-2 rounded-lg bg-secondary text-secondary-foreground text-sm font-medium opacity-50 cursor-not-allowed">
-              <ChevronLeft className="h-4 w-4" /> Chapit anvan
-            </button>
-            <span className="text-sm text-muted-foreground">1 / 8</span>
-            <Link
-              to={`/chapter/${novelId}/c2`}
-              className="inline-flex items-center gap-1 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity"
-            >
-              Chapit swivan <ChevronRight className="h-4 w-4" />
-            </Link>
+            {prevChapter ? (
+              <Link to={`/chapter/${novelId}/${prevChapter.id}`}
+                className="inline-flex items-center gap-1 px-4 py-2 rounded-lg bg-secondary text-secondary-foreground text-sm font-medium hover:bg-secondary/80">
+                <ChevronLeft className="h-4 w-4" /> Chapit anvan
+              </Link>
+            ) : (
+              <span className="inline-flex items-center gap-1 px-4 py-2 rounded-lg bg-secondary text-secondary-foreground text-sm font-medium opacity-50 cursor-not-allowed">
+                <ChevronLeft className="h-4 w-4" /> Chapit anvan
+              </span>
+            )}
+            <span className="text-sm text-muted-foreground">{chapter.chapter_number} / {allChapters.length}</span>
+            {nextChapter ? (
+              <Link to={`/chapter/${novelId}/${nextChapter.id}`}
+                className="inline-flex items-center gap-1 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90">
+                Chapit swivan <ChevronRight className="h-4 w-4" />
+              </Link>
+            ) : (
+              <span className="inline-flex items-center gap-1 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium opacity-50 cursor-not-allowed">
+                Chapit swivan <ChevronRight className="h-4 w-4" />
+              </span>
+            )}
           </div>
         </div>
       </main>

@@ -14,6 +14,124 @@ export type Database = {
   }
   public: {
     Tables: {
+      chapters: {
+        Row: {
+          chapter_number: number
+          coin_price: number
+          content: string
+          created_at: string
+          id: string
+          is_premium: boolean
+          novel_id: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          chapter_number: number
+          coin_price?: number
+          content?: string
+          created_at?: string
+          id?: string
+          is_premium?: boolean
+          novel_id: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          chapter_number?: number
+          coin_price?: number
+          content?: string
+          created_at?: string
+          id?: string
+          is_premium?: boolean
+          novel_id?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chapters_novel_id_fkey"
+            columns: ["novel_id"]
+            isOneToOne: false
+            referencedRelation: "novels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      novel_reactions: {
+        Row: {
+          created_at: string
+          id: string
+          novel_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          novel_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          novel_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "novel_reactions_novel_id_fkey"
+            columns: ["novel_id"]
+            isOneToOne: false
+            referencedRelation: "novels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      novels: {
+        Row: {
+          author: string
+          cover_url: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          genre: Database["public"]["Enums"]["novel_genre"]
+          id: string
+          reactions: number
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          author: string
+          cover_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          genre?: Database["public"]["Enums"]["novel_genre"]
+          id?: string
+          reactions?: number
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          author?: string
+          cover_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          genre?: Database["public"]["Enums"]["novel_genre"]
+          id?: string
+          reactions?: number
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -43,6 +161,38 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      unlocked_chapters: {
+        Row: {
+          chapter_id: string
+          coins_spent: number
+          id: string
+          unlocked_at: string
+          user_id: string
+        }
+        Insert: {
+          chapter_id: string
+          coins_spent?: number
+          id?: string
+          unlocked_at?: string
+          user_id: string
+        }
+        Update: {
+          chapter_id?: string
+          coins_spent?: number
+          id?: string
+          unlocked_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "unlocked_chapters_chapter_id_fkey"
+            columns: ["chapter_id"]
+            isOneToOne: false
+            referencedRelation: "chapters"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
@@ -77,6 +227,17 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
+      novel_genre:
+        | "Romantik"
+        | "Dram"
+        | "Avanti"
+        | "Thriller"
+        | "Fanmi"
+        | "Fantezi"
+        | "Aksyon"
+        | "Komedi"
+        | "Orre"
+        | "Syans-Fiksyon"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -205,6 +366,18 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "moderator", "user"],
+      novel_genre: [
+        "Romantik",
+        "Dram",
+        "Avanti",
+        "Thriller",
+        "Fanmi",
+        "Fantezi",
+        "Aksyon",
+        "Komedi",
+        "Orre",
+        "Syans-Fiksyon",
+      ],
     },
   },
 } as const
