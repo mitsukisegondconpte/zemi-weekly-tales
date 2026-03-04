@@ -20,8 +20,8 @@ const Index = () => {
     <div className="min-h-screen flex flex-col bg-background pb-20 md:pb-0">
       <Header />
       <main className="flex-1">
-        {/* Hero Slideshow */}
-        <section className="container pt-6 pb-4">
+        {/* Hero Slideshow - Full width */}
+        <section className="w-full pt-0">
           <HeroSlideshow novels={topNovels.map(n => ({ id: n.id, title: n.title, author: n.author, description: n.description || "", rating: n.reactions, genre: n.genre }))} />
         </section>
 
