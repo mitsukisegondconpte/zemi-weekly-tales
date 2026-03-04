@@ -4,6 +4,8 @@ import BottomNav from "@/components/BottomNav";
 import { Coins, BookOpen, Heart, ShoppingCart, LogOut, History, CreditCard } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const COIN_PACKAGES = [
   { coins: 50, price: "$2.99", popular: false },
@@ -18,8 +20,38 @@ const TABS = [
 ];
 
 const Profile = () => {
-  const { user, profile, signOut } = useAuth();
+  const { user, profile, signOut, refreshProfile } = useAuth();
   const [activeTab, setActiveTab] = useState("coins");
+  const [code, setCode] = useState("");
+  const [redeeming, setRedeeming] = useState(false);
+
+  const redeemCode = async () => {
+    if (!code.trim()) { toast.error("Antre yon kòd"); return; }
+    if (!user) { toast.error("Ou dwe konekte"); return; }
+    setRedeeming(true);
+    try {
+      const { data, error } = await supabase.rpc("redeem_coin_code", {
+        _user_id: user.id,
+        _code: code.trim(),
+      });
+
+      if (error) {
+        if (error.message.includes("not found")) toast.error("Kòd sa a pa valid oswa pa aktif");
+        else if (error.message.includes("maximum")) toast.error("Kòd sa a deja itilize twòp fwa");
+        else if (error.message.includes("already redeemed")) toast.error("Ou deja itilize kòd sa a");
+        else toast.error("Yon erè rive");
+        return;
+      }
+
+      await refreshProfile();
+      setCode("");
+      toast.success(`🎉 ${data} coins ajoute nan kont ou!`);
+    } catch (err) {
+      toast.error("Yon erè rive");
+    } finally {
+      setRedeeming(false);
+    }
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-background pb-20 md:pb-0">
@@ -113,11 +145,18 @@ const Profile = () => {
               <div className="flex gap-2 max-w-md">
                 <input
                   type="text"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && redeemCode()}
                   placeholder="Antre kòd inik ou..."
-                  className="flex-1 rounded-xl border border-input bg-background px-4 py-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-shadow"
+                  className="flex-1 rounded-xl border border-input bg-background px-4 py-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-shadow uppercase"
                 />
-                <button className="px-5 py-3 rounded-xl gradient-brand text-primary-foreground font-bold hover:opacity-90 transition-opacity shadow-lg active:scale-95">
-                  Valide
+                <button
+                  onClick={redeemCode}
+                  disabled={redeeming}
+                  className="px-5 py-3 rounded-xl gradient-brand text-primary-foreground font-bold hover:opacity-90 transition-opacity shadow-lg active:scale-95 disabled:opacity-50"
+                >
+                  {redeeming ? "..." : "Valide"}
                 </button>
               </div>
             </div>

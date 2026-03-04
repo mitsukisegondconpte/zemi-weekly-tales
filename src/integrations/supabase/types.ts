@@ -61,6 +61,68 @@ export type Database = {
           },
         ]
       }
+      code_redemptions: {
+        Row: {
+          code_id: string
+          coins_received: number
+          id: string
+          redeemed_at: string
+          user_id: string
+        }
+        Insert: {
+          code_id: string
+          coins_received?: number
+          id?: string
+          redeemed_at?: string
+          user_id: string
+        }
+        Update: {
+          code_id?: string
+          coins_received?: number
+          id?: string
+          redeemed_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "code_redemptions_code_id_fkey"
+            columns: ["code_id"]
+            isOneToOne: false
+            referencedRelation: "coin_codes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coin_codes: {
+        Row: {
+          code: string
+          coins: number
+          created_at: string
+          id: string
+          is_active: boolean
+          max_uses: number
+          used_count: number
+        }
+        Insert: {
+          code: string
+          coins?: number
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          max_uses?: number
+          used_count?: number
+        }
+        Update: {
+          code?: string
+          coins?: number
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          max_uses?: number
+          used_count?: number
+        }
+        Relationships: []
+      }
       novel_reactions: {
         Row: {
           created_at: string
@@ -223,6 +285,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      redeem_coin_code: {
+        Args: { _code: string; _user_id: string }
+        Returns: number
       }
     }
     Enums: {

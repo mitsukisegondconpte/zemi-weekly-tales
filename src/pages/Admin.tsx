@@ -1,15 +1,16 @@
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { useState } from "react";
-import { BookOpen, Coins, BarChart3, Users, FileText, Plus, Trash2, Edit, Save, X, Eye, EyeOff } from "lucide-react";
+import { BookOpen, Coins, BarChart3, Users, FileText, Plus, Trash2, Edit, Save, X, Eye, EyeOff, Key } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdminNovels, useAdminChapters, GENRES } from "@/hooks/useNovels";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 const TABS = [
   { id: "novels", label: "Novèl", icon: BookOpen },
   { id: "chapters", label: "Chapit", icon: FileText },
+  { id: "codes", label: "Kòd Coins", icon: Key },
   { id: "stats", label: "Statistik", icon: BarChart3 },
 ];
 
@@ -27,13 +28,24 @@ const Admin = () => {
   const [showChapterForm, setShowChapterForm] = useState(false);
   const [chapterForm, setChapterForm] = useState({ title: "", content: "", chapter_number: 1, is_premium: false, coin_price: 0, status: "draft" });
 
+  // Code form
+  const [showCodeForm, setShowCodeForm] = useState(false);
+  const [codeForm, setCodeForm] = useState({ code: "", coins: 10, max_uses: 1 });
+
   const { data: novels = [], isLoading: novelsLoading } = useAdminNovels();
   const { data: chapters = [] } = useAdminChapters(selectedNovelId || undefined);
+  const { data: codes = [] } = useQuery({
+    queryKey: ["coin_codes"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("coin_codes").select("*").order("created_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
 
   // ===== NOVEL CRUD =====
   const saveNovel = async () => {
     if (!novelForm.title || !novelForm.author) { toast.error("Tit ak otè obligatwa"); return; }
-
     if (editingNovel) {
       const { error } = await supabase.from("novels").update({
         title: novelForm.title, author: novelForm.author,
@@ -73,15 +85,10 @@ const Admin = () => {
   const saveChapter = async () => {
     if (!selectedNovelId) { toast.error("Chwazi yon novèl"); return; }
     if (!chapterForm.title || !chapterForm.content) { toast.error("Tit ak kontni obligatwa"); return; }
-
     const { error } = await supabase.from("chapters").insert({
-      novel_id: selectedNovelId,
-      title: chapterForm.title,
-      content: chapterForm.content,
-      chapter_number: chapterForm.chapter_number,
-      is_premium: chapterForm.is_premium,
-      coin_price: chapterForm.is_premium ? chapterForm.coin_price : 0,
-      status: chapterForm.status,
+      novel_id: selectedNovelId, title: chapterForm.title, content: chapterForm.content,
+      chapter_number: chapterForm.chapter_number, is_premium: chapterForm.is_premium,
+      coin_price: chapterForm.is_premium ? chapterForm.coin_price : 0, status: chapterForm.status,
     });
     if (error) { toast.error(error.message); return; }
     toast.success("Chapit ajoute!");
@@ -102,6 +109,33 @@ const Admin = () => {
     await supabase.from("chapters").delete().eq("id", id);
     queryClient.invalidateQueries({ queryKey: ["chapters"] });
     toast.success("Chapit efase");
+  };
+
+  // ===== CODE CRUD =====
+  const saveCode = async () => {
+    if (!codeForm.code.trim()) { toast.error("Kòd obligatwa"); return; }
+    const { error } = await supabase.from("coin_codes").insert({
+      code: codeForm.code.trim().toUpperCase(),
+      coins: codeForm.coins,
+      max_uses: codeForm.max_uses,
+    });
+    if (error) { toast.error(error.message); return; }
+    toast.success("Kòd kreye!");
+    setShowCodeForm(false);
+    setCodeForm({ code: "", coins: 10, max_uses: 1 });
+    queryClient.invalidateQueries({ queryKey: ["coin_codes"] });
+  };
+
+  const toggleCode = async (id: string, active: boolean) => {
+    await supabase.from("coin_codes").update({ is_active: !active }).eq("id", id);
+    queryClient.invalidateQueries({ queryKey: ["coin_codes"] });
+  };
+
+  const deleteCode = async (id: string) => {
+    if (!confirm("Efase kòd sa a?")) return;
+    await supabase.from("coin_codes").delete().eq("id", id);
+    queryClient.invalidateQueries({ queryKey: ["coin_codes"] });
+    toast.success("Kòd efase");
   };
 
   return (
@@ -134,7 +168,6 @@ const Admin = () => {
                 </button>
               </div>
 
-              {/* Novel Form */}
               {showNovelForm && (
                 <div className="rounded-xl border border-primary/30 bg-card p-6 mb-6 space-y-4">
                   <div className="flex items-center justify-between">
@@ -171,7 +204,6 @@ const Admin = () => {
                 </div>
               )}
 
-              {/* Novels List */}
               {novelsLoading ? <p className="text-muted-foreground">Chajman...</p> : (
                 <div className="rounded-xl border border-border overflow-hidden">
                   <table className="w-full text-sm">
@@ -234,7 +266,6 @@ const Admin = () => {
                 )}
               </div>
 
-              {/* Chapter Form */}
               {showChapterForm && selectedNovelId && (
                 <div className="rounded-xl border border-primary/30 bg-card p-6 space-y-4">
                   <div className="flex items-center justify-between">
@@ -286,7 +317,6 @@ const Admin = () => {
                 </div>
               )}
 
-              {/* Chapters list */}
               {selectedNovelId && chapters.length > 0 && (
                 <div className="rounded-xl border border-border overflow-hidden">
                   <table className="w-full text-sm">
@@ -332,6 +362,85 @@ const Admin = () => {
                 <p className="text-muted-foreground text-center py-8">Pa gen chapit ankò pou novèl sa a.</p>
               )}
               {!selectedNovelId && <p className="text-muted-foreground text-center py-8">Chwazi yon novèl pou wè chapit li yo.</p>}
+            </div>
+          )}
+
+          {/* ========== CODES TAB ========== */}
+          {tab === "codes" && (
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-bold text-foreground">Kòd Coins ({codes.length})</h2>
+                <button onClick={() => { setShowCodeForm(true); setCodeForm({ code: "", coins: 10, max_uses: 1 }); }}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90">
+                  <Plus className="h-4 w-4" /> Nouvo Kòd
+                </button>
+              </div>
+
+              {showCodeForm && (
+                <div className="rounded-xl border border-primary/30 bg-card p-6 mb-6 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-bold text-foreground">Nouvo Kòd</h3>
+                    <button onClick={() => setShowCodeForm(false)}><X className="h-5 w-5 text-muted-foreground" /></button>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                      <label className="text-xs font-medium text-foreground block mb-1">Kòd *</label>
+                      <input value={codeForm.code} onChange={e => setCodeForm(p => ({ ...p, code: e.target.value }))}
+                        className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground uppercase" placeholder="Ex: ZEMI2026" />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-foreground block mb-1">Coins</label>
+                      <input type="number" min={1} value={codeForm.coins} onChange={e => setCodeForm(p => ({ ...p, coins: +e.target.value }))}
+                        className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground" />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-foreground block mb-1">Max itilizasyon</label>
+                      <input type="number" min={1} value={codeForm.max_uses} onChange={e => setCodeForm(p => ({ ...p, max_uses: +e.target.value }))}
+                        className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground" />
+                    </div>
+                  </div>
+                  <button onClick={saveCode} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary text-primary-foreground font-medium text-sm hover:opacity-90">
+                    <Save className="h-4 w-4" /> Kreye Kòd
+                  </button>
+                </div>
+              )}
+
+              <div className="rounded-xl border border-border overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead className="bg-secondary">
+                    <tr>
+                      <th className="text-left px-4 py-3 font-medium text-secondary-foreground">Kòd</th>
+                      <th className="text-left px-4 py-3 font-medium text-secondary-foreground">Coins</th>
+                      <th className="text-left px-4 py-3 font-medium text-secondary-foreground">Itilize</th>
+                      <th className="text-left px-4 py-3 font-medium text-secondary-foreground">Estati</th>
+                      <th className="text-right px-4 py-3 font-medium text-secondary-foreground">Aksyon</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {codes.map((c: any) => (
+                      <tr key={c.id} className="border-t border-border">
+                        <td className="px-4 py-3 font-mono font-bold text-foreground">{c.code}</td>
+                        <td className="px-4 py-3"><span className="coin-badge inline-flex items-center gap-1 text-xs"><Coins className="h-3 w-3" />{c.coins}</span></td>
+                        <td className="px-4 py-3 text-muted-foreground">{c.used_count}/{c.max_uses}</td>
+                        <td className="px-4 py-3">
+                          <span className={`text-xs font-semibold px-2 py-1 rounded-full ${c.is_active ? "bg-primary/10 text-primary" : "bg-secondary text-muted-foreground"}`}>
+                            {c.is_active ? "Aktif" : "Dezaktive"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-right space-x-2">
+                          <button onClick={() => toggleCode(c.id, c.is_active)}>
+                            {c.is_active ? <EyeOff className="h-4 w-4 inline text-muted-foreground hover:text-foreground" /> : <Eye className="h-4 w-4 inline text-primary" />}
+                          </button>
+                          <button onClick={() => deleteCode(c.id)}><Trash2 className="h-4 w-4 inline text-destructive" /></button>
+                        </td>
+                      </tr>
+                    ))}
+                    {codes.length === 0 && (
+                      <tr><td colSpan={5} className="text-center py-8 text-muted-foreground">Pa gen kòd ankò.</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
 
