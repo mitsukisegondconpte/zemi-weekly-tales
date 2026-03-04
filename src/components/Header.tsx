@@ -28,8 +28,8 @@ const Header = () => {
           </div>
         </Link>
 
-        {/* Desktop nav */}
-        <nav className="hidden md:flex items-center gap-4">
+        {/* Admin nav */}
+        <nav className="flex items-center gap-4">
           {isAdmin && (
             <Link
               to="/admin"
@@ -38,7 +38,7 @@ const Header = () => {
               }`}
             >
               <Shield className="h-4 w-4" />
-              Admin
+              <span className="hidden sm:inline">Admin</span>
             </Link>
           )}
         </nav>

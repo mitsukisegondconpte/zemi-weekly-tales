@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { Home, BookOpen, Search, LayoutGrid, User } from "lucide-react";
+import { Home, BookOpen, Search, LayoutGrid, User, Shield } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState } from "react";
 
@@ -13,8 +13,12 @@ const NAV_ITEMS = [
 
 const BottomNav = () => {
   const location = useLocation();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const [tapped, setTapped] = useState<string | null>(null);
+
+  const items = isAdmin
+    ? [...NAV_ITEMS.slice(0, 4), { to: "/admin", label: "Admin", icon: Shield }]
+    : NAV_ITEMS;
 
   const handleTap = (to: string) => {
     setTapped(to);
@@ -24,7 +28,7 @@ const BottomNav = () => {
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80 md:hidden">
       <div className="flex items-center justify-around h-16 px-2">
-        {NAV_ITEMS.map((item) => {
+        {items.map((item) => {
           const isActive = location.pathname === item.to;
           const isTapped = tapped === item.to;
           const dest = item.to === "/profile" && !user ? "/login" : item.to;
