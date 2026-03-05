@@ -2,20 +2,24 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import BottomNav from "@/components/BottomNav";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { BookOpen, Coins, Lock, ChevronLeft, Star, Heart } from "lucide-react";
+import { BookOpen, Coins, Lock, ChevronLeft, Heart, Star } from "lucide-react";
 import { useNovel, useChapters } from "@/hooks/useNovels";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 
 const NovelDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user, profile } = useAuth();
+  const { user, profile, refreshProfile } = useAuth();
   const queryClient = useQueryClient();
   const { data: novel, isLoading } = useNovel(id);
   const { data: chapters = [] } = useChapters(id);
+  const [showUnlockDialog, setShowUnlockDialog] = useState(false);
+  const [pendingChapter, setPendingChapter] = useState<any>(null);
+  const [unlocking, setUnlocking] = useState(false);
 
   // Check unlocked chapters
   const { data: unlockedIds = [] } = useQuery({
@@ -30,7 +34,38 @@ const NovelDetail = () => {
     },
   });
 
+  // Check if user favorited this novel
+  const { data: isFavorited = false } = useQuery({
+    queryKey: ["favorite", id, user?.id],
+    enabled: !!user && !!id,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("favorites")
+        .select("id")
+        .eq("user_id", user!.id)
+        .eq("novel_id", id!)
+        .maybeSingle();
+      return !!data;
+    },
+  });
+
+  const toggleFavorite = async () => {
+    if (!user) { toast.error("Konekte pou ajoute nan favoris"); navigate("/login"); return; }
+    if (isFavorited) {
+      await supabase.from("favorites").delete().eq("user_id", user.id).eq("novel_id", id!);
+    } else {
+      await supabase.from("favorites").insert({ user_id: user.id, novel_id: id! });
+    }
+    queryClient.invalidateQueries({ queryKey: ["favorite", id] });
+  };
+
   const handleChapterClick = async (ch: typeof chapters[0]) => {
+    // Must be logged in
+    if (!user) {
+      toast.error("Ou dwe kreye yon kont pou li");
+      navigate("/login");
+      return;
+    }
     // Free chapter
     if (!ch.is_premium || ch.coin_price === 0) {
       navigate(`/chapter/${id}/${ch.id}`);
@@ -41,32 +76,39 @@ const NovelDetail = () => {
       navigate(`/chapter/${id}/${ch.id}`);
       return;
     }
-    // Need login
-    if (!user) {
-      toast.error("Konekte pou li chapit premium yo");
-      navigate("/login");
+    // Show confirmation dialog
+    setPendingChapter(ch);
+    setShowUnlockDialog(true);
+  };
+
+  const confirmUnlock = async () => {
+    if (!pendingChapter || !user) return;
+    if (!profile || profile.coins < pendingChapter.coin_price) {
+      toast.error(`Ou bezwen ${pendingChapter.coin_price} coins. Ou gen ${profile?.coins ?? 0} coins.`);
+      setShowUnlockDialog(false);
       return;
     }
-    // Check coins
-    if (!profile || profile.coins < ch.coin_price) {
-      toast.error(`Ou bezwen ${ch.coin_price} coins. Ou gen ${profile?.coins ?? 0} coins.`);
-      return;
+    setUnlocking(true);
+    try {
+      const { error } = await supabase.rpc("unlock_chapter", {
+        _user_id: user.id,
+        _chapter_id: pendingChapter.id,
+      });
+      if (error) {
+        toast.error(error.message.includes("Not enough") ? "Pa gen ase coins" : "Yon erè rive");
+        return;
+      }
+      await refreshProfile();
+      queryClient.invalidateQueries({ queryKey: ["unlocked"] });
+      toast.success(`${pendingChapter.coin_price} coins retire. Bòn lekti!`);
+      navigate(`/chapter/${id}/${pendingChapter.id}`);
+    } catch {
+      toast.error("Yon erè rive");
+    } finally {
+      setUnlocking(false);
+      setShowUnlockDialog(false);
+      setPendingChapter(null);
     }
-    // Deduct coins + unlock
-    const { error: updateErr } = await supabase
-      .from("profiles")
-      .update({ coins: profile.coins - ch.coin_price })
-      .eq("user_id", user.id);
-    if (updateErr) { toast.error("Erè pandan retire coins"); return; }
-
-    const { error: unlockErr } = await supabase
-      .from("unlocked_chapters")
-      .insert({ user_id: user.id, chapter_id: ch.id, coins_spent: ch.coin_price });
-    if (unlockErr) { toast.error("Erè pandan debloking"); return; }
-
-    toast.success(`${ch.coin_price} coins retire. Bòn lekti!`);
-    queryClient.invalidateQueries({ queryKey: ["unlocked"] });
-    navigate(`/chapter/${id}/${ch.id}`);
   };
 
   if (isLoading) return <div className="min-h-screen flex items-center justify-center bg-background"><p className="text-muted-foreground">Chajman...</p></div>;
@@ -94,10 +136,24 @@ const NovelDetail = () => {
                 <span className="text-sm text-muted-foreground">{chapters.length} chapit</span>
               </div>
               {novel.description && <p className="text-muted-foreground mt-3 max-w-xl text-sm">{novel.description}</p>}
+              <div className="flex gap-3 mt-4">
+                <button onClick={toggleFavorite}
+                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                    isFavorited ? "gradient-brand text-primary-foreground shadow-md" : "border border-border text-foreground hover:border-primary"
+                  }`}>
+                  <Heart className={`h-4 w-4 ${isFavorited ? "fill-current" : ""}`} />
+                  {isFavorited ? "Nan Favoris" : "Ajoute Favoris"}
+                </button>
+              </div>
             </div>
           </div>
 
           <h2 className="text-xl font-bold font-serif text-foreground mb-3">Chapit yo</h2>
+          {!user && (
+            <div className="mb-4 p-4 rounded-xl border border-primary/30 bg-primary/5 text-center">
+              <p className="text-sm text-foreground font-medium">Ou dwe <Link to="/login" className="text-primary font-bold hover:underline">konekte</Link> oswa <Link to="/register" className="text-primary font-bold hover:underline">kreye yon kont</Link> pou li novèl sa a.</p>
+            </div>
+          )}
           {chapters.length === 0 ? (
             <p className="text-muted-foreground text-center py-8">Pa gen chapit pibliye ankò.</p>
           ) : (
@@ -145,6 +201,37 @@ const NovelDetail = () => {
       </main>
       <Footer />
       <BottomNav />
+      {/* Unlock confirmation dialog */}
+      {showUnlockDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm" onClick={() => { setShowUnlockDialog(false); setPendingChapter(null); }}>
+          <div className="bg-card border border-border rounded-2xl p-6 max-w-sm w-full mx-4 shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="text-center">
+              <div className="h-14 w-14 rounded-full gradient-brand flex items-center justify-center mx-auto mb-4">
+                <Coins className="h-7 w-7 text-primary-foreground" />
+              </div>
+              <h3 className="text-lg font-bold text-foreground mb-1">Debloke Chapit?</h3>
+              <p className="text-muted-foreground text-sm mb-4">
+                Chapit sa a koute <strong className="text-foreground">{pendingChapter?.coin_price} coins</strong>.
+                <br />Ou gen <strong className={profile && profile.coins >= (pendingChapter?.coin_price ?? 0) ? "text-primary" : "text-destructive"}>{profile?.coins ?? 0} coins</strong>.
+              </p>
+              {profile && profile.coins < (pendingChapter?.coin_price ?? 0) && (
+                <p className="text-destructive text-sm font-medium mb-4">Pa gen ase coins!</p>
+              )}
+              <div className="flex gap-3">
+                <button onClick={() => { setShowUnlockDialog(false); setPendingChapter(null); }}
+                  className="flex-1 px-4 py-2.5 rounded-xl border border-border text-foreground font-medium hover:bg-secondary">
+                  Anile
+                </button>
+                <button onClick={confirmUnlock}
+                  disabled={!profile || profile.coins < (pendingChapter?.coin_price ?? 0) || unlocking}
+                  className="flex-1 px-4 py-2.5 rounded-xl gradient-brand text-primary-foreground font-bold hover:opacity-90 disabled:opacity-50">
+                  {unlocking ? "..." : "Debloke"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
