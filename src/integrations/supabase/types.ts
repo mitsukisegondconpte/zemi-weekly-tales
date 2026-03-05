@@ -23,6 +23,7 @@ export type Database = {
           id: string
           is_premium: boolean
           novel_id: string
+          scheduled_at: string | null
           status: string
           title: string
           updated_at: string
@@ -35,6 +36,7 @@ export type Database = {
           id?: string
           is_premium?: boolean
           novel_id: string
+          scheduled_at?: string | null
           status?: string
           title: string
           updated_at?: string
@@ -47,6 +49,7 @@ export type Database = {
           id?: string
           is_premium?: boolean
           novel_id?: string
+          scheduled_at?: string | null
           status?: string
           title?: string
           updated_at?: string
@@ -123,6 +126,65 @@ export type Database = {
         }
         Relationships: []
       }
+      favorites: {
+        Row: {
+          created_at: string
+          id: string
+          novel_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          novel_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          novel_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "favorites_novel_id_fkey"
+            columns: ["novel_id"]
+            isOneToOne: false
+            referencedRelation: "novels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          created_at: string
+          id: string
+          is_read: boolean
+          message: string
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message?: string
+          title: string
+          type?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message?: string
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       novel_reactions: {
         Row: {
           created_at: string
@@ -162,6 +224,7 @@ export type Database = {
           genre: Database["public"]["Enums"]["novel_genre"]
           id: string
           reactions: number
+          scheduled_at: string | null
           status: string
           title: string
           updated_at: string
@@ -175,6 +238,7 @@ export type Database = {
           genre?: Database["public"]["Enums"]["novel_genre"]
           id?: string
           reactions?: number
+          scheduled_at?: string | null
           status?: string
           title: string
           updated_at?: string
@@ -188,6 +252,7 @@ export type Database = {
           genre?: Database["public"]["Enums"]["novel_genre"]
           id?: string
           reactions?: number
+          scheduled_at?: string | null
           status?: string
           title?: string
           updated_at?: string
@@ -223,6 +288,45 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      reading_history: {
+        Row: {
+          chapter_id: string
+          id: string
+          novel_id: string
+          read_at: string
+          user_id: string
+        }
+        Insert: {
+          chapter_id: string
+          id?: string
+          novel_id: string
+          read_at?: string
+          user_id: string
+        }
+        Update: {
+          chapter_id?: string
+          id?: string
+          novel_id?: string
+          read_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reading_history_chapter_id_fkey"
+            columns: ["chapter_id"]
+            isOneToOne: false
+            referencedRelation: "chapters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reading_history_novel_id_fkey"
+            columns: ["novel_id"]
+            isOneToOne: false
+            referencedRelation: "novels"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       unlocked_chapters: {
         Row: {
@@ -286,8 +390,13 @@ export type Database = {
         }
         Returns: boolean
       }
+      publish_scheduled_content: { Args: never; Returns: undefined }
       redeem_coin_code: {
         Args: { _code: string; _user_id: string }
+        Returns: number
+      }
+      unlock_chapter: {
+        Args: { _chapter_id: string; _user_id: string }
         Returns: number
       }
     }

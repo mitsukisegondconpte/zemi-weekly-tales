@@ -10,6 +10,7 @@ import NovelDetail from "./pages/NovelDetail";
 import ChapterReader from "./pages/ChapterReader";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import ResetPassword from "./pages/ResetPassword";
 import Profile from "./pages/Profile";
 import Admin from "./pages/Admin";
 import SearchPage from "./pages/SearchPage";
@@ -29,9 +30,10 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/novel/:id" element={<NovelDetail />} />
-            <Route path="/chapter/:novelId/:chapterId" element={<ChapterReader />} />
+            <Route path="/chapter/:novelId/:chapterId" element={<ProtectedRoute><ChapterReader /></ProtectedRoute>} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/search" element={<SearchPage />} />
             <Route path="/lecture" element={<LecturePage />} />
             <Route path="/canvas" element={<CanvasPage />} />
