@@ -126,6 +126,51 @@ export type Database = {
         }
         Relationships: []
       }
+      comments: {
+        Row: {
+          chapter_id: string
+          content: string
+          created_at: string
+          id: string
+          is_approved: boolean
+          novel_id: string
+          user_id: string
+        }
+        Insert: {
+          chapter_id: string
+          content: string
+          created_at?: string
+          id?: string
+          is_approved?: boolean
+          novel_id: string
+          user_id: string
+        }
+        Update: {
+          chapter_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          is_approved?: boolean
+          novel_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comments_chapter_id_fkey"
+            columns: ["chapter_id"]
+            isOneToOne: false
+            referencedRelation: "chapters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comments_novel_id_fkey"
+            columns: ["novel_id"]
+            isOneToOne: false
+            referencedRelation: "novels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       favorites: {
         Row: {
           created_at: string
@@ -184,6 +229,38 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      novel_ratings: {
+        Row: {
+          created_at: string
+          id: string
+          novel_id: string
+          rating: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          novel_id: string
+          rating: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          novel_id?: string
+          rating?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "novel_ratings_novel_id_fkey"
+            columns: ["novel_id"]
+            isOneToOne: false
+            referencedRelation: "novels"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       novel_reactions: {
         Row: {

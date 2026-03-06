@@ -127,4 +127,70 @@
     padding: 0.25rem 0.75rem;
     font-size: 0.875rem;
   }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Chapter content styles */
+.chapter-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.75rem;
+  box-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.15);
+  margin: 1.5rem auto;
+  display: block;
+}
+
+.chapter-content p {
+  margin-bottom: 0;
+}
+
+.chapter-content h1,
+.chapter-content h2,
+.chapter-content h3 {
+  font-family: 'Playfair Display', serif;
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.chapter-content blockquote {
+  border-left: 3px solid hsl(var(--primary));
+  padding-left: 1rem;
+  opacity: 0.85;
+  font-style: italic;
+}
+
+.chapter-content hr {
+  border: none;
+  border-top: 1px solid currentColor;
+  opacity: 0.15;
+  margin: 2rem 0;
+}
+
+/* Quill editor overrides */
+.ql-container {
+  font-family: 'Inter', sans-serif !important;
+  font-size: 14px !important;
+  min-height: 250px;
+}
+
+.ql-editor {
+  min-height: 250px;
+}
+
+.ql-toolbar {
+  border-color: hsl(var(--border)) !important;
+  background: hsl(var(--secondary)) !important;
+  border-radius: 0.75rem 0.75rem 0 0 !important;
+}
+
+.ql-container {
+  border-color: hsl(var(--border)) !important;
+  border-radius: 0 0 0.75rem 0.75rem !important;
 }
