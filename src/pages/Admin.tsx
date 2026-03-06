@@ -1,20 +1,22 @@
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import { useState } from "react";
-import { BookOpen, Coins, BarChart3, FileText, Plus, Trash2, Edit, Save, X, Eye, EyeOff, Key, Calendar, AlertTriangle } from "lucide-react";
+import { useState, useMemo } from "react";
+import { BookOpen, Coins, BarChart3, FileText, Plus, Trash2, Edit, Save, X, Eye, EyeOff, Key, Calendar, AlertTriangle, Image, Upload, MessageSquare } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdminNovels, useAdminChapters, GENRES } from "@/hooks/useNovels";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
+import ReactQuill from "react-quill-new";
+import "react-quill-new/dist/quill.snow.css";
 
 const TABS = [
   { id: "novels", label: "Novèl", icon: BookOpen },
   { id: "chapters", label: "Chapit", icon: FileText },
   { id: "codes", label: "Kòd Coins", icon: Key },
+  { id: "comments", label: "Kòmantè", icon: MessageSquare },
   { id: "stats", label: "Statistik", icon: BarChart3 },
 ];
 
-// Confirmation dialog component
 const ConfirmDialog = ({ title, message, onConfirm, onCancel, destructive = false }: {
   title: string; message: string; onConfirm: () => void; onCancel: () => void; destructive?: boolean;
 }) => (
@@ -28,9 +30,7 @@ const ConfirmDialog = ({ title, message, onConfirm, onCancel, destructive = fals
       </div>
       <p className="text-muted-foreground text-sm mb-6">{message}</p>
       <div className="flex gap-3">
-        <button onClick={onCancel} className="flex-1 px-4 py-3 rounded-xl border border-border text-foreground font-medium hover:bg-secondary text-sm">
-          Anile
-        </button>
+        <button onClick={onCancel} className="flex-1 px-4 py-3 rounded-xl border border-border text-foreground font-medium hover:bg-secondary text-sm">Anile</button>
         <button onClick={onConfirm}
           className={`flex-1 px-4 py-3 rounded-xl font-bold text-sm ${destructive ? "bg-destructive text-destructive-foreground hover:opacity-90" : "gradient-brand text-primary-foreground hover:opacity-90"}`}>
           Konfime
@@ -40,11 +40,21 @@ const ConfirmDialog = ({ title, message, onConfirm, onCancel, destructive = fals
   </div>
 );
 
+const QUILL_MODULES = {
+  toolbar: [
+    [{ header: [1, 2, 3, false] }],
+    ["bold", "italic", "underline", "strike"],
+    [{ list: "ordered" }, { list: "bullet" }],
+    ["blockquote"],
+    ["link", "image"],
+    [{ align: [] }],
+    ["clean"],
+  ],
+};
+
 const Admin = () => {
   const [tab, setTab] = useState("novels");
   const queryClient = useQueryClient();
-
-  // Confirmation state
   const [confirmAction, setConfirmAction] = useState<{ title: string; message: string; action: () => void; destructive?: boolean } | null>(null);
 
   const withConfirm = (title: string, message: string, action: () => void, destructive = false) => {
@@ -55,6 +65,7 @@ const Admin = () => {
   const [showNovelForm, setShowNovelForm] = useState(false);
   const [novelForm, setNovelForm] = useState({ title: "", author: "", description: "", genre: "Dram" as string, scheduled_at: "" });
   const [editingNovel, setEditingNovel] = useState<string | null>(null);
+  const [coverFile, setCoverFile] = useState<File | null>(null);
 
   // Chapter form
   const [selectedNovelId, setSelectedNovelId] = useState<string>("");
@@ -76,6 +87,15 @@ const Admin = () => {
     },
   });
 
+  // Comments for moderation
+  const { data: allComments = [] } = useQuery({
+    queryKey: ["admin_comments"],
+    queryFn: async () => {
+      const { data } = await supabase.from("comments").select("*, profiles:user_id(display_name), novels:novel_id(title), chapters:chapter_id(title, chapter_number)").order("created_at", { ascending: false }).limit(50);
+      return data ?? [];
+    },
+  });
+
   // ===== NOVEL CRUD =====
   const saveNovel = async () => {
     if (!novelForm.title || !novelForm.author) { toast.error("Tit ak otè obligatwa"); return; }
@@ -83,31 +103,37 @@ const Admin = () => {
     const status = novelForm.scheduled_at ? "draft" : "published";
 
     const doSave = async () => {
+      let cover_url: string | null = null;
+      if (coverFile) {
+        const ext = coverFile.name.split(".").pop();
+        const path = `covers/${Date.now()}.${ext}`;
+        const { error: upErr } = await supabase.storage.from("chapter-images").upload(path, coverFile);
+        if (upErr) { toast.error("Erè upload: " + upErr.message); return; }
+        const { data: urlData } = supabase.storage.from("chapter-images").getPublicUrl(path);
+        cover_url = urlData.publicUrl;
+      }
+
       if (editingNovel) {
-        const { error } = await supabase.from("novels").update({
-          title: novelForm.title, author: novelForm.author,
-          description: novelForm.description, genre: novelForm.genre as any,
-          scheduled_at: scheduled
-        }).eq("id", editingNovel);
+        const updateData: any = { title: novelForm.title, author: novelForm.author, description: novelForm.description, genre: novelForm.genre as any, scheduled_at: scheduled };
+        if (cover_url) updateData.cover_url = cover_url;
+        const { error } = await supabase.from("novels").update(updateData).eq("id", editingNovel);
         if (error) { toast.error(error.message); return; }
         toast.success("Novèl modifye!");
       } else {
-        const { error } = await supabase.from("novels").insert({
-          title: novelForm.title, author: novelForm.author,
-          description: novelForm.description, genre: novelForm.genre as any,
-          status, scheduled_at: scheduled
-        });
+        const insertData: any = { title: novelForm.title, author: novelForm.author, description: novelForm.description, genre: novelForm.genre as any, status, scheduled_at: scheduled };
+        if (cover_url) insertData.cover_url = cover_url;
+        const { error } = await supabase.from("novels").insert(insertData);
         if (error) { toast.error(error.message); return; }
         toast.success("Novèl kreye!");
       }
-      setShowNovelForm(false); setEditingNovel(null);
+      setShowNovelForm(false); setEditingNovel(null); setCoverFile(null);
       setNovelForm({ title: "", author: "", description: "", genre: "Dram", scheduled_at: "" });
       queryClient.invalidateQueries({ queryKey: ["novels"] });
     };
     withConfirm(editingNovel ? "Modifye Novèl" : "Kreye Novèl", `Ou sèten ou vle ${editingNovel ? "modifye" : "kreye"} novèl "${novelForm.title}"?`, doSave);
   };
 
-  const toggleNovelStatus = async (id: string, current: string) => {
+  const toggleNovelStatus = (id: string, current: string) => {
     const newStatus = current === "published" ? "draft" : "published";
     withConfirm(
       newStatus === "published" ? "Pibliye Novèl" : "Retire Novèl",
@@ -120,7 +146,7 @@ const Admin = () => {
     );
   };
 
-  const deleteNovel = async (id: string) => {
+  const deleteNovel = (id: string) => {
     withConfirm("Efase Novèl", "Aksyon sa a pa ka defèt. Tout chapit yo pral efase tou!", async () => {
       await supabase.from("novels").delete().eq("id", id);
       queryClient.invalidateQueries({ queryKey: ["novels"] });
@@ -139,8 +165,7 @@ const Admin = () => {
       const { error } = await supabase.from("chapters").insert({
         novel_id: selectedNovelId, title: chapterForm.title, content: chapterForm.content,
         chapter_number: chapterForm.chapter_number, is_premium: chapterForm.is_premium,
-        coin_price: chapterForm.is_premium ? chapterForm.coin_price : 0,
-        status, scheduled_at: scheduled,
+        coin_price: chapterForm.is_premium ? chapterForm.coin_price : 0, status, scheduled_at: scheduled,
       });
       if (error) { toast.error(error.message); return; }
       toast.success("Chapit ajoute!");
@@ -150,10 +175,9 @@ const Admin = () => {
     });
   };
 
-  const toggleChapterStatus = async (id: string, current: string) => {
+  const toggleChapterStatus = (id: string, current: string) => {
     const newStatus = current === "published" ? "draft" : "published";
-    withConfirm(
-      newStatus === "published" ? "Pibliye Chapit" : "Retire Chapit",
+    withConfirm(newStatus === "published" ? "Pibliye Chapit" : "Retire Chapit",
       `Ou sèten ou vle ${newStatus === "published" ? "pibliye" : "mete an bouyon"} chapit sa a?`,
       async () => {
         await supabase.from("chapters").update({ status: newStatus }).eq("id", id);
@@ -163,7 +187,7 @@ const Admin = () => {
     );
   };
 
-  const deleteChapter = async (id: string) => {
+  const deleteChapter = (id: string) => {
     withConfirm("Efase Chapit", "Aksyon sa a pa ka defèt!", async () => {
       await supabase.from("chapters").delete().eq("id", id);
       queryClient.invalidateQueries({ queryKey: ["chapters"] });
@@ -175,11 +199,7 @@ const Admin = () => {
   const saveCode = async () => {
     if (!codeForm.code.trim()) { toast.error("Kòd obligatwa"); return; }
     withConfirm("Kreye Kòd", `Kreye kòd "${codeForm.code.toUpperCase()}" ak ${codeForm.coins} coins?`, async () => {
-      const { error } = await supabase.from("coin_codes").insert({
-        code: codeForm.code.trim().toUpperCase(),
-        coins: codeForm.coins,
-        max_uses: codeForm.max_uses,
-      });
+      const { error } = await supabase.from("coin_codes").insert({ code: codeForm.code.trim().toUpperCase(), coins: codeForm.coins, max_uses: codeForm.max_uses });
       if (error) { toast.error(error.message); return; }
       toast.success("Kòd kreye!");
       setShowCodeForm(false);
@@ -188,19 +208,49 @@ const Admin = () => {
     });
   };
 
-  const toggleCode = async (id: string, active: boolean) => {
+  const toggleCode = (id: string, active: boolean) => {
     withConfirm(active ? "Dezaktive Kòd" : "Aktive Kòd", `Ou sèten?`, async () => {
       await supabase.from("coin_codes").update({ is_active: !active }).eq("id", id);
       queryClient.invalidateQueries({ queryKey: ["coin_codes"] });
     });
   };
 
-  const deleteCode = async (id: string) => {
+  const deleteCode = (id: string) => {
     withConfirm("Efase Kòd", "Aksyon sa a pa ka defèt!", async () => {
       await supabase.from("coin_codes").delete().eq("id", id);
       queryClient.invalidateQueries({ queryKey: ["coin_codes"] });
       toast.success("Kòd efase");
     }, true);
+  };
+
+  const deleteComment = (id: string) => {
+    withConfirm("Efase Kòmantè", "Retire kòmantè sa a?", async () => {
+      await supabase.from("comments").delete().eq("id", id);
+      queryClient.invalidateQueries({ queryKey: ["admin_comments"] });
+      toast.success("Kòmantè efase");
+    }, true);
+  };
+
+  // Image upload handler for Quill
+  const handleImageUpload = async () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/jpeg,image/png,image/webp";
+    input.onchange = async () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      if (file.size > 5 * 1024 * 1024) { toast.error("Imaj twò gwo (max 5MB)"); return; }
+      const ext = file.name.split(".").pop()?.toLowerCase();
+      if (!["jpg", "jpeg", "png", "webp"].includes(ext || "")) { toast.error("Fòma pa sipòte. Itilize jpg, png oswa webp."); return; }
+      const path = `chapters/${Date.now()}.${ext}`;
+      const { error } = await supabase.storage.from("chapter-images").upload(path, file);
+      if (error) { toast.error("Erè upload: " + error.message); return; }
+      const { data } = supabase.storage.from("chapter-images").getPublicUrl(path);
+      const imgTag = `<img src="${data.publicUrl}" alt="scene" style="max-width:100%;border-radius:12px;margin:16px 0" />`;
+      setChapterForm(p => ({ ...p, content: p.content + "\n" + imgTag }));
+      toast.success("Imaj ajoute!");
+    };
+    input.click();
   };
 
   return (
@@ -210,8 +260,7 @@ const Admin = () => {
         <div className="container py-6 md:py-8">
           <h1 className="text-2xl md:text-3xl font-black font-serif text-foreground mb-6">Panel Admin</h1>
 
-          {/* Tabs - mobile friendly */}
-          <div className="grid grid-cols-2 sm:flex gap-2 sm:gap-1 mb-6 sm:mb-8">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:flex gap-2 sm:gap-1 mb-6 sm:mb-8">
             {TABS.map((t) => (
               <button key={t.id} onClick={() => setTab(t.id)}
                 className={`flex items-center justify-center gap-2 px-4 py-3 sm:py-2.5 rounded-xl sm:rounded-lg text-sm font-bold transition-all active:scale-95 ${
@@ -227,7 +276,7 @@ const Admin = () => {
             <div>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-bold text-foreground">Tout Novèl ({novels.length})</h2>
-                <button onClick={() => { setShowNovelForm(true); setEditingNovel(null); setNovelForm({ title: "", author: "", description: "", genre: "Dram", scheduled_at: "" }); }}
+                <button onClick={() => { setShowNovelForm(true); setEditingNovel(null); setCoverFile(null); setNovelForm({ title: "", author: "", description: "", genre: "Dram", scheduled_at: "" }); }}
                   className="inline-flex items-center gap-2 px-5 py-3 rounded-xl gradient-brand text-primary-foreground text-sm font-bold shadow-lg hover:opacity-90 active:scale-95">
                   <Plus className="h-5 w-5" /> Nouvo Novèl
                 </button>
@@ -270,21 +319,30 @@ const Admin = () => {
                     <textarea rows={3} value={novelForm.description} onChange={e => setNovelForm(p => ({ ...p, description: e.target.value }))}
                       className="w-full rounded-xl border border-input bg-background px-4 py-3 text-sm text-foreground resize-y" placeholder="Kèk mo sou novèl la" />
                   </div>
+                  <div>
+                    <label className="text-sm font-medium text-foreground block mb-1.5 flex items-center gap-1">
+                      <Image className="h-4 w-4" /> Kouvèti (jpg, png, webp)
+                    </label>
+                    <input type="file" accept="image/jpeg,image/png,image/webp" onChange={e => setCoverFile(e.target.files?.[0] || null)}
+                      className="w-full text-sm text-foreground file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20" />
+                  </div>
                   <button onClick={saveNovel} className="inline-flex items-center gap-2 px-6 py-3 rounded-xl gradient-brand text-primary-foreground font-bold text-sm hover:opacity-90 shadow-lg active:scale-95">
                     <Save className="h-5 w-5" /> {editingNovel ? "Anrejistre" : "Kreye"}
                   </button>
                 </div>
               )}
 
-              {/* Novel cards for mobile */}
               {novelsLoading ? <p className="text-muted-foreground">Chajman...</p> : (
                 <div className="space-y-3">
                   {novels.map((n) => (
                     <div key={n.id} className="rounded-xl border border-border bg-card p-4 shadow-sm">
                       <div className="flex items-start justify-between mb-2">
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-bold text-foreground truncate">{n.title}</h3>
-                          <p className="text-sm text-muted-foreground">{n.author} • {n.genre}</p>
+                        <div className="flex items-start gap-3 flex-1 min-w-0">
+                          {n.cover_url && <img src={n.cover_url} alt="" className="w-12 h-16 rounded-lg object-cover shrink-0" />}
+                          <div className="min-w-0">
+                            <h3 className="font-bold text-foreground truncate">{n.title}</h3>
+                            <p className="text-sm text-muted-foreground">{n.author} • {n.genre}</p>
+                          </div>
                         </div>
                         <span className={`text-xs font-bold px-3 py-1 rounded-full shrink-0 ml-2 ${n.status === "published" ? "bg-primary/10 text-primary" : "bg-secondary text-muted-foreground"}`}>
                           {n.status === "published" ? "Pibliye" : "Bouyon"}
@@ -298,19 +356,13 @@ const Admin = () => {
                           {n.status === "published" ? <><EyeOff className="h-4 w-4" /> Retire</> : <><Eye className="h-4 w-4" /> Pibliye</>}
                         </button>
                         <button onClick={() => { setEditingNovel(n.id); setNovelForm({ title: n.title, author: n.author, description: n.description || "", genre: n.genre, scheduled_at: "" }); setShowNovelForm(true); }}
-                          className="px-3 py-2.5 rounded-xl bg-secondary text-secondary-foreground active:scale-95">
-                          <Edit className="h-4 w-4" />
-                        </button>
+                          className="px-3 py-2.5 rounded-xl bg-secondary text-secondary-foreground active:scale-95"><Edit className="h-4 w-4" /></button>
                         <button onClick={() => deleteNovel(n.id)}
-                          className="px-3 py-2.5 rounded-xl bg-destructive/10 text-destructive active:scale-95">
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+                          className="px-3 py-2.5 rounded-xl bg-destructive/10 text-destructive active:scale-95"><Trash2 className="h-4 w-4" /></button>
                       </div>
                     </div>
                   ))}
-                  {novels.length === 0 && (
-                    <p className="text-center py-8 text-muted-foreground">Pa gen novèl ankò. Kreye premye a!</p>
-                  )}
+                  {novels.length === 0 && <p className="text-center py-8 text-muted-foreground">Pa gen novèl ankò. Kreye premye a!</p>}
                 </div>
               )}
             </div>
@@ -372,12 +424,28 @@ const Admin = () => {
                         className="w-full rounded-xl border border-input bg-background px-4 py-3 text-sm text-foreground" />
                     </div>
                   </div>
+
+                  {/* Rich text editor */}
                   <div>
-                    <label className="text-sm font-medium text-foreground block mb-1.5">Kontni *</label>
-                    <textarea rows={12} value={chapterForm.content} onChange={e => setChapterForm(p => ({ ...p, content: e.target.value }))}
-                      className="w-full rounded-xl border border-input bg-background px-4 py-3 text-sm text-foreground resize-y"
-                      placeholder="Ekri kontni chapit la isit..." />
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="text-sm font-medium text-foreground">Kontni *</label>
+                      <button onClick={handleImageUpload} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-xs font-semibold hover:bg-primary/20">
+                        <Upload className="h-3.5 w-3.5" /> Ajoute Imaj
+                      </button>
+                    </div>
+                    <div className="border border-input rounded-xl overflow-hidden bg-background">
+                      <ReactQuill
+                        theme="snow"
+                        value={chapterForm.content}
+                        onChange={(value) => setChapterForm(p => ({ ...p, content: value }))}
+                        modules={QUILL_MODULES}
+                        placeholder="Ekri kontni chapit la isit... Itilize toolbar pou fòmate tèks la, ajoute imaj, elatriye."
+                        className="min-h-[300px]"
+                      />
+                    </div>
+                    <p className="text-[11px] text-muted-foreground mt-1">Tip: Itilize "---pagebreak---" pou ajoute so paj manyèl.</p>
                   </div>
+
                   <div className="flex flex-wrap items-center gap-3">
                     {!chapterForm.scheduled_at && (
                       <select value={chapterForm.status} onChange={e => setChapterForm(p => ({ ...p, status: e.target.value }))}
@@ -393,7 +461,6 @@ const Admin = () => {
                 </div>
               )}
 
-              {/* Chapter cards */}
               {selectedNovelId && chapters.length > 0 && (
                 <div className="space-y-2">
                   {chapters.map((ch) => (
@@ -405,9 +472,7 @@ const Admin = () => {
                             <p className="font-bold text-foreground text-sm">{ch.title}</p>
                             {ch.is_premium ? (
                               <span className="coin-badge inline-flex items-center gap-1 text-[10px] mt-1"><Coins className="h-3 w-3" />{ch.coin_price}</span>
-                            ) : (
-                              <span className="text-xs font-semibold text-primary">GRATIS</span>
-                            )}
+                            ) : <span className="text-xs font-semibold text-primary">GRATIS</span>}
                           </div>
                         </div>
                         <span className={`text-xs font-bold px-3 py-1 rounded-full ${ch.status === "published" ? "bg-primary/10 text-primary" : "bg-secondary text-muted-foreground"}`}>
@@ -421,18 +486,13 @@ const Admin = () => {
                           }`}>
                           {ch.status === "published" ? <><EyeOff className="h-4 w-4" /> Retire</> : <><Eye className="h-4 w-4" /> Pibliye</>}
                         </button>
-                        <button onClick={() => deleteChapter(ch.id)}
-                          className="px-3 py-2.5 rounded-xl bg-destructive/10 text-destructive active:scale-95">
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+                        <button onClick={() => deleteChapter(ch.id)} className="px-3 py-2.5 rounded-xl bg-destructive/10 text-destructive active:scale-95"><Trash2 className="h-4 w-4" /></button>
                       </div>
                     </div>
                   ))}
                 </div>
               )}
-              {selectedNovelId && chapters.length === 0 && !showChapterForm && (
-                <p className="text-muted-foreground text-center py-8">Pa gen chapit ankò pou novèl sa a.</p>
-              )}
+              {selectedNovelId && chapters.length === 0 && !showChapterForm && <p className="text-muted-foreground text-center py-8">Pa gen chapit ankò pou novèl sa a.</p>}
               {!selectedNovelId && <p className="text-muted-foreground text-center py-8">Chwazi yon novèl pou wè chapit li yo.</p>}
             </div>
           )}
@@ -477,7 +537,6 @@ const Admin = () => {
                 </div>
               )}
 
-              {/* Code cards */}
               <div className="space-y-2">
                 {codes.map((c: any) => (
                   <div key={c.id} className="rounded-xl border border-border bg-card p-4 shadow-sm">
@@ -500,16 +559,38 @@ const Admin = () => {
                         }`}>
                         {c.is_active ? <><EyeOff className="h-4 w-4" /> Dezaktive</> : <><Eye className="h-4 w-4" /> Aktive</>}
                       </button>
-                      <button onClick={() => deleteCode(c.id)}
-                        className="px-3 py-2.5 rounded-xl bg-destructive/10 text-destructive active:scale-95">
+                      <button onClick={() => deleteCode(c.id)} className="px-3 py-2.5 rounded-xl bg-destructive/10 text-destructive active:scale-95"><Trash2 className="h-4 w-4" /></button>
+                    </div>
+                  </div>
+                ))}
+                {codes.length === 0 && <p className="text-center py-8 text-muted-foreground">Pa gen kòd ankò.</p>}
+              </div>
+            </div>
+          )}
+
+          {/* ========== COMMENTS TAB ========== */}
+          {tab === "comments" && (
+            <div>
+              <h2 className="text-lg font-bold text-foreground mb-4">Moderasyon Kòmantè ({allComments.length})</h2>
+              <div className="space-y-2">
+                {allComments.map((c: any) => (
+                  <div key={c.id} className="rounded-xl border border-border bg-card p-4 shadow-sm">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-semibold text-foreground text-sm">{(c as any).profiles?.display_name || "Anonim"}</span>
+                          <span className="text-[10px] text-muted-foreground">{new Date(c.created_at).toLocaleString()}</span>
+                        </div>
+                        <p className="text-sm text-foreground mb-1">{c.content}</p>
+                        <p className="text-xs text-muted-foreground">{(c as any).novels?.title} — Chapit {(c as any).chapters?.chapter_number}</p>
+                      </div>
+                      <button onClick={() => deleteComment(c.id)} className="px-3 py-2 rounded-xl bg-destructive/10 text-destructive active:scale-95 shrink-0 ml-2">
                         <Trash2 className="h-4 w-4" />
                       </button>
                     </div>
                   </div>
                 ))}
-                {codes.length === 0 && (
-                  <p className="text-center py-8 text-muted-foreground">Pa gen kòd ankò.</p>
-                )}
+                {allComments.length === 0 && <p className="text-center py-8 text-muted-foreground">Pa gen kòmantè ankò.</p>}
               </div>
             </div>
           )}
@@ -534,15 +615,9 @@ const Admin = () => {
         </div>
       </main>
       <Footer />
-      {/* Confirmation dialog */}
       {confirmAction && (
-        <ConfirmDialog
-          title={confirmAction.title}
-          message={confirmAction.message}
-          destructive={confirmAction.destructive}
-          onConfirm={() => { confirmAction.action(); setConfirmAction(null); }}
-          onCancel={() => setConfirmAction(null)}
-        />
+        <ConfirmDialog title={confirmAction.title} message={confirmAction.message} destructive={confirmAction.destructive}
+          onConfirm={() => { confirmAction.action(); setConfirmAction(null); }} onCancel={() => setConfirmAction(null)} />
       )}
     </div>
   );

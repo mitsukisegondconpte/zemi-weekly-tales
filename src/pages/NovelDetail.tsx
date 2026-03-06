@@ -20,34 +20,61 @@ const NovelDetail = () => {
   const [showUnlockDialog, setShowUnlockDialog] = useState(false);
   const [pendingChapter, setPendingChapter] = useState<any>(null);
   const [unlocking, setUnlocking] = useState(false);
+  const [hoverRating, setHoverRating] = useState(0);
 
-  // Check unlocked chapters
+  // Unlocked chapters
   const { data: unlockedIds = [] } = useQuery({
     queryKey: ["unlocked", id, user?.id],
     enabled: !!user && !!id,
     queryFn: async () => {
-      const { data } = await supabase
-        .from("unlocked_chapters")
-        .select("chapter_id")
-        .eq("user_id", user!.id);
+      const { data } = await supabase.from("unlocked_chapters").select("chapter_id").eq("user_id", user!.id);
       return (data ?? []).map(d => d.chapter_id);
     },
   });
 
-  // Check if user favorited this novel
+  // Favorite
   const { data: isFavorited = false } = useQuery({
     queryKey: ["favorite", id, user?.id],
     enabled: !!user && !!id,
     queryFn: async () => {
-      const { data } = await supabase
-        .from("favorites")
-        .select("id")
-        .eq("user_id", user!.id)
-        .eq("novel_id", id!)
-        .maybeSingle();
+      const { data } = await supabase.from("favorites").select("id").eq("user_id", user!.id).eq("novel_id", id!).maybeSingle();
       return !!data;
     },
   });
+
+  // Ratings
+  const { data: ratingData } = useQuery({
+    queryKey: ["ratings", id],
+    enabled: !!id,
+    queryFn: async () => {
+      const { data } = await supabase.from("novel_ratings").select("rating").eq("novel_id", id!);
+      const ratings = data ?? [];
+      const avg = ratings.length > 0 ? ratings.reduce((s, r) => s + r.rating, 0) / ratings.length : 0;
+      return { avg: Math.round(avg * 10) / 10, count: ratings.length };
+    },
+  });
+
+  // User's rating
+  const { data: userRating = 0 } = useQuery({
+    queryKey: ["my_rating", id, user?.id],
+    enabled: !!user && !!id,
+    queryFn: async () => {
+      const { data } = await supabase.from("novel_ratings").select("rating").eq("user_id", user!.id).eq("novel_id", id!).maybeSingle();
+      return data?.rating ?? 0;
+    },
+  });
+
+  const submitRating = async (rating: number) => {
+    if (!user) { toast.error("Konekte pou vote"); navigate("/login"); return; }
+    if (userRating > 0) {
+      await supabase.from("novel_ratings").update({ rating }).eq("user_id", user.id).eq("novel_id", id!);
+    } else {
+      await supabase.from("novel_ratings").insert({ user_id: user.id, novel_id: id!, rating });
+    }
+    queryClient.invalidateQueries({ queryKey: ["ratings", id] });
+    queryClient.invalidateQueries({ queryKey: ["my_rating", id] });
+    toast.success("Mèsi pou nòt ou!");
+  };
 
   const toggleFavorite = async () => {
     if (!user) { toast.error("Konekte pou ajoute nan favoris"); navigate("/login"); return; }
@@ -60,23 +87,11 @@ const NovelDetail = () => {
   };
 
   const handleChapterClick = async (ch: typeof chapters[0]) => {
-    // Must be logged in
-    if (!user) {
-      toast.error("Ou dwe kreye yon kont pou li");
-      navigate("/login");
-      return;
-    }
-    // Free chapter
-    if (!ch.is_premium || ch.coin_price === 0) {
+    if (!user) { toast.error("Ou dwe kreye yon kont pou li"); navigate("/login"); return; }
+    if (!ch.is_premium || ch.coin_price === 0 || unlockedIds.includes(ch.id)) {
       navigate(`/chapter/${id}/${ch.id}`);
       return;
     }
-    // Already unlocked
-    if (unlockedIds.includes(ch.id)) {
-      navigate(`/chapter/${id}/${ch.id}`);
-      return;
-    }
-    // Show confirmation dialog
     setPendingChapter(ch);
     setShowUnlockDialog(true);
   };
@@ -90,25 +105,14 @@ const NovelDetail = () => {
     }
     setUnlocking(true);
     try {
-      const { error } = await supabase.rpc("unlock_chapter", {
-        _user_id: user.id,
-        _chapter_id: pendingChapter.id,
-      });
-      if (error) {
-        toast.error(error.message.includes("Not enough") ? "Pa gen ase coins" : "Yon erè rive");
-        return;
-      }
+      const { error } = await supabase.rpc("unlock_chapter", { _user_id: user.id, _chapter_id: pendingChapter.id });
+      if (error) { toast.error(error.message.includes("Not enough") ? "Pa gen ase coins" : "Yon erè rive"); return; }
       await refreshProfile();
       queryClient.invalidateQueries({ queryKey: ["unlocked"] });
       toast.success(`${pendingChapter.coin_price} coins retire. Bòn lekti!`);
       navigate(`/chapter/${id}/${pendingChapter.id}`);
-    } catch {
-      toast.error("Yon erè rive");
-    } finally {
-      setUnlocking(false);
-      setShowUnlockDialog(false);
-      setPendingChapter(null);
-    }
+    } catch { toast.error("Yon erè rive"); }
+    finally { setUnlocking(false); setShowUnlockDialog(false); setPendingChapter(null); }
   };
 
   if (isLoading) return <div className="min-h-screen flex items-center justify-center bg-background"><p className="text-muted-foreground">Chajman...</p></div>;
@@ -124,19 +128,32 @@ const NovelDetail = () => {
           </Link>
 
           <div className="flex flex-col md:flex-row gap-6 mb-8">
-            <div className="w-40 h-56 rounded-xl gradient-brand flex items-center justify-center shrink-0 shadow-lg">
-              <BookOpen className="h-14 w-14 text-primary-foreground opacity-60" />
-            </div>
+            {novel.cover_url ? (
+              <img src={novel.cover_url} alt={novel.title} className="w-40 h-56 rounded-xl object-cover shrink-0 shadow-lg" loading="lazy" />
+            ) : (
+              <div className="w-40 h-56 rounded-xl gradient-brand flex items-center justify-center shrink-0 shadow-lg">
+                <BookOpen className="h-14 w-14 text-primary-foreground opacity-60" />
+              </div>
+            )}
             <div className="flex-1">
               <span className="text-xs font-semibold uppercase tracking-widest text-primary">{novel.genre}</span>
               <h1 className="text-2xl md:text-3xl font-black font-serif text-foreground mt-1">{novel.title}</h1>
               <p className="text-muted-foreground mt-1 text-sm">pa {novel.author}</p>
-              <div className="flex items-center gap-4 mt-2">
+
+              <div className="flex items-center gap-4 mt-2 flex-wrap">
                 <span className="flex items-center gap-1 text-sm"><Heart className="h-4 w-4 fill-primary text-primary" /> {novel.reactions}</span>
                 <span className="text-sm text-muted-foreground">{chapters.length} chapit</span>
+                {ratingData && ratingData.count > 0 && (
+                  <span className="flex items-center gap-1 text-sm">
+                    <Star className="h-4 w-4 fill-primary text-primary" />
+                    {ratingData.avg} <span className="text-muted-foreground">({ratingData.count})</span>
+                  </span>
+                )}
               </div>
+
               {novel.description && <p className="text-muted-foreground mt-3 max-w-xl text-sm">{novel.description}</p>}
-              <div className="flex gap-3 mt-4">
+
+              <div className="flex gap-3 mt-4 flex-wrap">
                 <button onClick={toggleFavorite}
                   className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
                     isFavorited ? "gradient-brand text-primary-foreground shadow-md" : "border border-border text-foreground hover:border-primary"
@@ -144,6 +161,25 @@ const NovelDetail = () => {
                   <Heart className={`h-4 w-4 ${isFavorited ? "fill-current" : ""}`} />
                   {isFavorited ? "Nan Favoris" : "Ajoute Favoris"}
                 </button>
+              </div>
+
+              {/* Star rating */}
+              <div className="mt-4">
+                <p className="text-xs text-muted-foreground mb-1">Note novèl sa a:</p>
+                <div className="flex items-center gap-1">
+                  {[1, 2, 3, 4, 5].map(star => (
+                    <button key={star}
+                      onMouseEnter={() => setHoverRating(star)}
+                      onMouseLeave={() => setHoverRating(0)}
+                      onClick={() => submitRating(star)}
+                      className="transition-transform hover:scale-125 active:scale-90">
+                      <Star className={`h-6 w-6 transition-colors ${
+                        star <= (hoverRating || userRating) ? "fill-primary text-primary" : "text-muted-foreground"
+                      }`} />
+                    </button>
+                  ))}
+                  {userRating > 0 && <span className="text-xs text-muted-foreground ml-2">Nòt ou: {userRating}/5</span>}
+                </div>
               </div>
             </div>
           </div>
@@ -161,19 +197,12 @@ const NovelDetail = () => {
               {chapters.map((ch) => {
                 const unlocked = !ch.is_premium || ch.coin_price === 0 || unlockedIds.includes(ch.id);
                 return (
-                  <button
-                    key={ch.id}
-                    onClick={() => handleChapterClick(ch)}
+                  <button key={ch.id} onClick={() => handleChapterClick(ch)}
                     className={`w-full flex items-center justify-between p-3.5 rounded-xl border transition-all active:scale-[0.98] text-left ${
-                      unlocked
-                        ? "border-border bg-card hover:border-primary hover:shadow-sm"
-                        : "border-border bg-card opacity-80 hover:border-primary/30"
-                    }`}
-                  >
+                      unlocked ? "border-border bg-card hover:border-primary hover:shadow-sm" : "border-border bg-card opacity-80 hover:border-primary/30"
+                    }`}>
                     <div className="flex items-center gap-3">
-                      <span className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center text-sm font-bold text-secondary-foreground">
-                        {ch.chapter_number}
-                      </span>
+                      <span className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center text-sm font-bold text-secondary-foreground">{ch.chapter_number}</span>
                       <span className="font-medium text-foreground text-sm">{ch.title}</span>
                     </div>
                     <div className="flex items-center gap-2">
@@ -182,9 +211,7 @@ const NovelDetail = () => {
                           <span className="text-xs font-semibold text-primary bg-primary/10 rounded-full px-3 py-1">DEBLOKE</span>
                         ) : (
                           <>
-                            <span className="coin-badge inline-flex items-center gap-1 text-xs">
-                              <Coins className="h-3 w-3" />{ch.coin_price}
-                            </span>
+                            <span className="coin-badge inline-flex items-center gap-1 text-xs"><Coins className="h-3 w-3" />{ch.coin_price}</span>
                             <Lock className="h-4 w-4 text-muted-foreground" />
                           </>
                         )
@@ -201,7 +228,8 @@ const NovelDetail = () => {
       </main>
       <Footer />
       <BottomNav />
-      {/* Unlock confirmation dialog */}
+
+      {/* Unlock dialog */}
       {showUnlockDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm" onClick={() => { setShowUnlockDialog(false); setPendingChapter(null); }}>
           <div className="bg-card border border-border rounded-2xl p-6 max-w-sm w-full mx-4 shadow-2xl" onClick={e => e.stopPropagation()}>
@@ -219,9 +247,7 @@ const NovelDetail = () => {
               )}
               <div className="flex gap-3">
                 <button onClick={() => { setShowUnlockDialog(false); setPendingChapter(null); }}
-                  className="flex-1 px-4 py-2.5 rounded-xl border border-border text-foreground font-medium hover:bg-secondary">
-                  Anile
-                </button>
+                  className="flex-1 px-4 py-2.5 rounded-xl border border-border text-foreground font-medium hover:bg-secondary">Anile</button>
                 <button onClick={confirmUnlock}
                   disabled={!profile || profile.coins < (pendingChapter?.coin_price ?? 0) || unlocking}
                   className="flex-1 px-4 py-2.5 rounded-xl gradient-brand text-primary-foreground font-bold hover:opacity-90 disabled:opacity-50">

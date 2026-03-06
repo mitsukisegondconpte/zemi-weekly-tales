@@ -1,13 +1,25 @@
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { ChevronLeft, ChevronRight, Lock, Coins } from "lucide-react";
+import { ChevronLeft, ChevronRight, Lock, Coins, Sun, Moon, BookOpen, Type, Minus, Plus, MessageSquare, Send } from "lucide-react";
 import { useChapter, useChapters } from "@/hooks/useNovels";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { useEffect, useCallback, useState } from "react";
+import { useEffect, useCallback, useState, useMemo, useRef } from "react";
+import { Progress } from "@/components/ui/progress";
+
+type ReadingTheme = "light" | "dark" | "sepia";
+
+const THEME_STYLES: Record<ReadingTheme, { bg: string; text: string; label: string }> = {
+  light: { bg: "bg-white", text: "text-gray-900", label: "Klè" },
+  dark: { bg: "bg-[#1a1a2e]", text: "text-gray-200", label: "Nwa" },
+  sepia: { bg: "bg-[#f4ecd8]", text: "text-[#5b4636]", label: "Sepia" },
+};
+
+const PARAGRAPHS_PER_PAGE = 12;
+const PAGE_BREAK_MARKER = "---pagebreak---";
 
 const ChapterReader = () => {
   const { novelId, chapterId } = useParams();
@@ -19,6 +31,56 @@ const ChapterReader = () => {
   const [showUnlockDialog, setShowUnlockDialog] = useState(false);
   const [pendingChapter, setPendingChapter] = useState<any>(null);
   const [unlocking, setUnlocking] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [showComments, setShowComments] = useState(false);
+  const [commentText, setCommentText] = useState("");
+  const [submittingComment, setSubmittingComment] = useState(false);
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  // Reading preferences
+  const [theme, setTheme] = useState<ReadingTheme>(() =>
+    (localStorage.getItem("reading-theme") as ReadingTheme) || "light"
+  );
+  const [fontSize, setFontSize] = useState(() => parseInt(localStorage.getItem("reading-font-size") || "18"));
+  const [maxWidth, setMaxWidth] = useState(() => parseInt(localStorage.getItem("reading-max-width") || "720"));
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(0);
+
+  // Progress
+  const [scrollProgress, setScrollProgress] = useState(0);
+
+  // Save preferences
+  useEffect(() => {
+    localStorage.setItem("reading-theme", theme);
+    localStorage.setItem("reading-font-size", String(fontSize));
+    localStorage.setItem("reading-max-width", String(maxWidth));
+  }, [theme, fontSize, maxWidth]);
+
+  // Restore page position
+  useEffect(() => {
+    if (chapterId) {
+      const saved = localStorage.getItem(`page-${chapterId}`);
+      if (saved) setCurrentPage(parseInt(saved));
+      else setCurrentPage(0);
+    }
+  }, [chapterId]);
+
+  // Save page position
+  useEffect(() => {
+    if (chapterId) localStorage.setItem(`page-${chapterId}`, String(currentPage));
+  }, [currentPage, chapterId]);
+
+  // Scroll progress tracking
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollTop = window.scrollY;
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      if (docHeight > 0) setScrollProgress((scrollTop / docHeight) * 100);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   // Force login
   useEffect(() => {
@@ -33,10 +95,7 @@ const ChapterReader = () => {
     queryKey: ["unlocked", novelId, user?.id],
     enabled: !!user && !!novelId,
     queryFn: async () => {
-      const { data } = await supabase
-        .from("unlocked_chapters")
-        .select("chapter_id")
-        .eq("user_id", user!.id);
+      const { data } = await supabase.from("unlocked_chapters").select("chapter_id").eq("user_id", user!.id);
       return (data ?? []).map(d => d.chapter_id);
     },
   });
@@ -51,7 +110,7 @@ const ChapterReader = () => {
     }
   }, [user, chapterId, novelId, chapter]);
 
-  // Copy protection for premium chapters
+  // Copy protection for premium
   useEffect(() => {
     if (!chapter?.is_premium) return;
     const prevent = (e: Event) => e.preventDefault();
@@ -65,23 +124,65 @@ const ChapterReader = () => {
     };
   }, [chapter?.is_premium]);
 
+  // Comments
+  const { data: comments = [], refetch: refetchComments } = useQuery({
+    queryKey: ["comments", chapterId],
+    enabled: !!chapterId,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("comments")
+        .select("*, profiles:user_id(display_name)")
+        .eq("chapter_id", chapterId!)
+        .order("created_at", { ascending: true });
+      return data ?? [];
+    },
+  });
+
+  const submitComment = async () => {
+    if (!commentText.trim() || !user || !chapterId || !novelId) return;
+    setSubmittingComment(true);
+    const { error } = await supabase.from("comments").insert({
+      user_id: user.id, chapter_id: chapterId, novel_id: novelId, content: commentText.trim()
+    });
+    setSubmittingComment(false);
+    if (error) { toast.error("Erè"); return; }
+    setCommentText("");
+    refetchComments();
+    toast.success("Kòmantè ajoute!");
+  };
+
+  // Paginate content
+  const pages = useMemo(() => {
+    if (!chapter?.content) return [[""]];
+    // Check for manual page breaks first
+    if (chapter.content.includes(PAGE_BREAK_MARKER)) {
+      return chapter.content.split(PAGE_BREAK_MARKER).map(section =>
+        section.split("\n").filter(p => p.trim())
+      );
+    }
+    // Auto-paginate by paragraphs
+    const allParagraphs = chapter.content.split("\n").filter(p => p.trim());
+    const result: string[][] = [];
+    for (let i = 0; i < allParagraphs.length; i += PARAGRAPHS_PER_PAGE) {
+      result.push(allParagraphs.slice(i, i + PARAGRAPHS_PER_PAGE));
+    }
+    return result.length > 0 ? result : [[""]];
+  }, [chapter?.content]);
+
+  const totalPages = pages.length;
+  const safePage = Math.min(currentPage, totalPages - 1);
+
   const currentIndex = allChapters.findIndex(c => c.id === chapterId);
   const prevChapter = currentIndex > 0 ? allChapters[currentIndex - 1] : null;
   const nextChapter = currentIndex < allChapters.length - 1 ? allChapters[currentIndex + 1] : null;
 
   const handleNavigateChapter = useCallback((ch: typeof allChapters[0]) => {
     if (!ch) return;
-    // Free chapter or already unlocked
     if (!ch.is_premium || ch.coin_price === 0 || unlockedIds.includes(ch.id)) {
       navigate(`/chapter/${novelId}/${ch.id}`);
       return;
     }
-    // Need to unlock - show confirmation
-    if (!user) {
-      toast.error("Konekte pou li chapit premium yo");
-      navigate("/login");
-      return;
-    }
+    if (!user) { toast.error("Konekte pou li chapit premium yo"); navigate("/login"); return; }
     setPendingChapter(ch);
     setShowUnlockDialog(true);
   }, [unlockedIds, user, novelId, navigate]);
@@ -95,32 +196,20 @@ const ChapterReader = () => {
     }
     setUnlocking(true);
     try {
-      const { data, error } = await supabase.rpc("unlock_chapter", {
-        _user_id: user.id,
-        _chapter_id: pendingChapter.id,
-      });
-      if (error) {
-        toast.error(error.message.includes("Not enough") ? "Pa gen ase coins" : "Yon erè rive");
-        return;
-      }
+      const { error } = await supabase.rpc("unlock_chapter", { _user_id: user.id, _chapter_id: pendingChapter.id });
+      if (error) { toast.error(error.message.includes("Not enough") ? "Pa gen ase coins" : "Yon erè rive"); return; }
       await refreshProfile();
       queryClient.invalidateQueries({ queryKey: ["unlocked"] });
       toast.success(`${pendingChapter.coin_price} coins retire. Bòn lekti!`);
       navigate(`/chapter/${novelId}/${pendingChapter.id}`);
-    } catch {
-      toast.error("Yon erè rive");
-    } finally {
-      setUnlocking(false);
-      setShowUnlockDialog(false);
-      setPendingChapter(null);
-    }
+    } catch { toast.error("Yon erè rive"); }
+    finally { setUnlocking(false); setShowUnlockDialog(false); setPendingChapter(null); }
   };
 
   if (!user) return null;
   if (isLoading) return <div className="min-h-screen flex items-center justify-center bg-background"><p className="text-muted-foreground">Chajman...</p></div>;
   if (!chapter) return <div className="min-h-screen flex items-center justify-center bg-background"><p className="text-muted-foreground">Chapit pa jwenn</p></div>;
 
-  // Check if current chapter is premium and not unlocked
   const currentIsLocked = chapter.is_premium && chapter.coin_price > 0 && !unlockedIds.includes(chapter.id);
   if (currentIsLocked) {
     return (
@@ -132,9 +221,7 @@ const ChapterReader = () => {
             <h2 className="text-xl font-bold text-foreground mb-2">Chapit Premium</h2>
             <p className="text-muted-foreground mb-4">Ou bezwen {chapter.coin_price} coins pou debloke chapit sa a.</p>
             <div className="flex gap-3 justify-center">
-              <Link to={`/novel/${novelId}`} className="px-4 py-2 rounded-xl bg-secondary text-secondary-foreground font-medium">
-                Retounen
-              </Link>
+              <Link to={`/novel/${novelId}`} className="px-4 py-2 rounded-xl bg-secondary text-secondary-foreground font-medium">Retounen</Link>
               <button onClick={() => { setPendingChapter(chapter); setShowUnlockDialog(true); }}
                 className="px-4 py-2 rounded-xl gradient-brand text-primary-foreground font-medium">
                 Debloke ({chapter.coin_price} coins)
@@ -143,77 +230,240 @@ const ChapterReader = () => {
           </div>
         </main>
         <Footer />
-        {/* Unlock dialog */}
         {showUnlockDialog && <UnlockDialog chapter={pendingChapter} coins={profile?.coins ?? 0} onConfirm={confirmUnlock} onCancel={() => { setShowUnlockDialog(false); setPendingChapter(null); }} loading={unlocking} />}
       </div>
     );
   }
 
-  return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <Header />
-      <main className="flex-1">
-        <div className="container max-w-3xl py-8">
-          <Link to={`/novel/${novelId}`} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-primary mb-6">
-            <ChevronLeft className="h-4 w-4" /> Retounen nan novèl la
-          </Link>
+  const ts = THEME_STYLES[theme];
 
+  return (
+    <div className={`min-h-screen flex flex-col ${ts.bg} transition-colors duration-300`}>
+      {/* Reading progress bar */}
+      <div className="fixed top-0 left-0 right-0 z-[60] h-1">
+        <div className="h-full gradient-brand transition-all duration-150" style={{ width: `${scrollProgress}%` }} />
+      </div>
+
+      {/* Sticky toolbar */}
+      <div className={`sticky top-0 z-50 border-b ${theme === 'dark' ? 'border-white/10 bg-[#1a1a2e]/95' : theme === 'sepia' ? 'border-[#c4a882] bg-[#f4ecd8]/95' : 'border-border bg-white/95'} backdrop-blur`}>
+        <div className="flex items-center justify-between px-4 py-2 max-w-4xl mx-auto">
+          <Link to={`/novel/${novelId}`} className={`flex items-center gap-1 text-sm ${ts.text} opacity-70 hover:opacity-100`}>
+            <ChevronLeft className="h-4 w-4" /> Retounen
+          </Link>
+          <div className="flex items-center gap-1">
+            <span className={`text-xs ${ts.text} opacity-60`}>
+              Chapit {chapter.chapter_number} • Paj {safePage + 1}/{totalPages}
+            </span>
+          </div>
+          <div className="flex items-center gap-1">
+            <button onClick={() => setShowSettings(!showSettings)}
+              className={`p-2 rounded-lg ${ts.text} opacity-70 hover:opacity-100 transition-all`}>
+              <Type className="h-4 w-4" />
+            </button>
+            <button onClick={() => setShowComments(!showComments)}
+              className={`p-2 rounded-lg ${ts.text} opacity-70 hover:opacity-100 transition-all relative`}>
+              <MessageSquare className="h-4 w-4" />
+              {comments.length > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-primary text-primary-foreground text-[9px] font-bold flex items-center justify-center">
+                  {comments.length}
+                </span>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Settings panel */}
+        {showSettings && (
+          <div className={`border-t ${theme === 'dark' ? 'border-white/10' : theme === 'sepia' ? 'border-[#c4a882]' : 'border-border'} px-4 py-3`}>
+            <div className="max-w-4xl mx-auto space-y-3">
+              {/* Theme selector */}
+              <div className="flex items-center gap-2">
+                <span className={`text-xs font-medium ${ts.text} opacity-60 w-16`}>Tèm</span>
+                <div className="flex gap-1.5">
+                  {(Object.keys(THEME_STYLES) as ReadingTheme[]).map(t => (
+                    <button key={t} onClick={() => setTheme(t)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                        theme === t
+                          ? "gradient-brand text-white shadow-md"
+                          : `${THEME_STYLES[t].bg} ${THEME_STYLES[t].text} border border-current/20`
+                      }`}>
+                      {THEME_STYLES[t].label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Font size */}
+              <div className="flex items-center gap-2">
+                <span className={`text-xs font-medium ${ts.text} opacity-60 w-16`}>Tay tèks</span>
+                <button onClick={() => setFontSize(f => Math.max(14, f - 2))} className={`p-1.5 rounded-lg border ${theme === 'dark' ? 'border-white/20' : 'border-border'}`}>
+                  <Minus className={`h-3 w-3 ${ts.text}`} />
+                </button>
+                <span className={`text-sm font-bold ${ts.text} w-8 text-center`}>{fontSize}</span>
+                <button onClick={() => setFontSize(f => Math.min(28, f + 2))} className={`p-1.5 rounded-lg border ${theme === 'dark' ? 'border-white/20' : 'border-border'}`}>
+                  <Plus className={`h-3 w-3 ${ts.text}`} />
+                </button>
+              </div>
+
+              {/* Width */}
+              <div className="flex items-center gap-2">
+                <span className={`text-xs font-medium ${ts.text} opacity-60 w-16`}>Lajè</span>
+                {[600, 720, 900].map(w => (
+                  <button key={w} onClick={() => setMaxWidth(w)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                      maxWidth === w ? "gradient-brand text-white shadow-md" : `${ts.text} opacity-60 border ${theme === 'dark' ? 'border-white/20' : 'border-border'}`
+                    }`}>
+                    {w === 600 ? "Etwat" : w === 720 ? "Mwayen" : "Laj"}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <main className="flex-1">
+        <div className="mx-auto px-4 py-8" style={{ maxWidth: `${maxWidth}px` }} ref={contentRef}>
           <div className="mb-8">
-            <span className="text-xs font-semibold uppercase tracking-widest text-primary">Chapit {chapter.chapter_number}</span>
-            <h1 className="text-3xl font-black font-serif text-foreground mt-1">{chapter.title}</h1>
+            <span className={`text-xs font-semibold uppercase tracking-widest ${theme === 'dark' ? 'text-orange-400' : 'text-primary'}`}>Chapit {chapter.chapter_number}</span>
+            <h1 className={`text-2xl md:text-3xl font-black font-serif ${ts.text} mt-1`}>{chapter.title}</h1>
           </div>
 
           {/* Watermark for premium */}
-          <article className={`prose prose-lg max-w-none text-foreground leading-relaxed space-y-4 relative ${chapter.is_premium ? "select-none" : ""}`}>
+          <article className={`relative ${chapter.is_premium ? "select-none" : ""}`} style={{ fontSize: `${fontSize}px`, lineHeight: 1.8 }}>
             {chapter.is_premium && (
-              <div className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-[0.04] text-foreground text-4xl font-black rotate-[-30deg] z-10 overflow-hidden">
-                <div className="whitespace-nowrap">
-                  {user?.email} • {new Date().toLocaleDateString()}
-                </div>
+              <div className={`pointer-events-none absolute inset-0 flex items-center justify-center opacity-[0.03] ${ts.text} text-4xl font-black rotate-[-30deg] z-10 overflow-hidden`}>
+                <div className="whitespace-nowrap">{user?.email} • {new Date().toLocaleDateString()}</div>
               </div>
             )}
-            {chapter.content.split("\n").map((paragraph, i) => (
-              paragraph.trim() ? <p key={i}>{paragraph}</p> : null
-            ))}
+
+            {/* Render current page paragraphs with HTML support */}
+            <div className={`${ts.text} space-y-6 chapter-content`}>
+              {pages[safePage]?.map((paragraph, i) => {
+                // Check if it's HTML content (has tags)
+                if (paragraph.includes("<")) {
+                  return <div key={i} dangerouslySetInnerHTML={{ __html: paragraph }} />;
+                }
+                return <p key={i}>{paragraph}</p>;
+              })}
+            </div>
           </article>
 
-          {/* Navigation */}
-          <div className="flex items-center justify-between mt-12 pt-6 border-t border-border">
+          {/* Page navigation */}
+          {totalPages > 1 && (
+            <div className="mt-10 space-y-4">
+              {/* Page progress */}
+              <Progress value={((safePage + 1) / totalPages) * 100} className="h-2" />
+
+              <div className="flex items-center justify-between">
+                <button
+                  onClick={() => { setCurrentPage(p => Math.max(0, p - 1)); window.scrollTo(0, 0); }}
+                  disabled={safePage === 0}
+                  className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                    safePage === 0 ? "opacity-30 cursor-not-allowed" : "hover:opacity-80"
+                  } ${theme === 'dark' ? 'bg-white/10 text-white' : theme === 'sepia' ? 'bg-[#d4c4a8] text-[#5b4636]' : 'bg-secondary text-secondary-foreground'}`}>
+                  <ChevronLeft className="h-4 w-4 inline mr-1" /> Paj anvan
+                </button>
+
+                <div className="flex gap-1">
+                  {Array.from({ length: totalPages }, (_, i) => (
+                    <button key={i} onClick={() => { setCurrentPage(i); window.scrollTo(0, 0); }}
+                      className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${
+                        i === safePage ? "gradient-brand text-white shadow-md" : `${ts.text} opacity-40 hover:opacity-70`
+                      }`}>
+                      {i + 1}
+                    </button>
+                  ))}
+                </div>
+
+                <button
+                  onClick={() => { setCurrentPage(p => Math.min(totalPages - 1, p + 1)); window.scrollTo(0, 0); }}
+                  disabled={safePage >= totalPages - 1}
+                  className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                    safePage >= totalPages - 1 ? "opacity-30 cursor-not-allowed" : "hover:opacity-80"
+                  } ${theme === 'dark' ? 'bg-white/10 text-white' : theme === 'sepia' ? 'bg-[#d4c4a8] text-[#5b4636]' : 'bg-secondary text-secondary-foreground'}`}>
+                  Paj swivan <ChevronRight className="h-4 w-4 inline ml-1" />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Chapter navigation */}
+          <div className={`flex items-center justify-between mt-8 pt-6 border-t ${theme === 'dark' ? 'border-white/10' : theme === 'sepia' ? 'border-[#c4a882]' : 'border-border'}`}>
             {prevChapter ? (
               <button onClick={() => handleNavigateChapter(prevChapter)}
-                className="inline-flex items-center gap-1 px-4 py-2 rounded-lg bg-secondary text-secondary-foreground text-sm font-medium hover:bg-secondary/80">
+                className={`inline-flex items-center gap-1 px-4 py-2.5 rounded-xl text-sm font-medium ${theme === 'dark' ? 'bg-white/10 text-white' : theme === 'sepia' ? 'bg-[#d4c4a8] text-[#5b4636]' : 'bg-secondary text-secondary-foreground'}`}>
                 <ChevronLeft className="h-4 w-4" /> Chapit anvan
               </button>
-            ) : (
-              <span className="inline-flex items-center gap-1 px-4 py-2 rounded-lg bg-secondary text-secondary-foreground text-sm font-medium opacity-50 cursor-not-allowed">
-                <ChevronLeft className="h-4 w-4" /> Chapit anvan
-              </span>
-            )}
-            <span className="text-sm text-muted-foreground">{chapter.chapter_number} / {allChapters.length}</span>
+            ) : <div />}
+            <span className={`text-sm ${ts.text} opacity-50`}>{chapter.chapter_number} / {allChapters.length}</span>
             {nextChapter ? (
               <button onClick={() => handleNavigateChapter(nextChapter)}
-                className="inline-flex items-center gap-1 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90">
+                className="inline-flex items-center gap-1 px-4 py-2.5 rounded-xl gradient-brand text-white text-sm font-medium hover:opacity-90 shadow-lg">
                 Chapit swivan <ChevronRight className="h-4 w-4" />
-                {nextChapter.is_premium && nextChapter.coin_price > 0 && !unlockedIds.includes(nextChapter.id) && (
-                  <Lock className="h-3 w-3 ml-1" />
-                )}
+                {nextChapter.is_premium && nextChapter.coin_price > 0 && !unlockedIds.includes(nextChapter.id) && <Lock className="h-3 w-3 ml-1" />}
               </button>
-            ) : (
-              <span className="inline-flex items-center gap-1 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium opacity-50 cursor-not-allowed">
-                Chapit swivan <ChevronRight className="h-4 w-4" />
-              </span>
-            )}
+            ) : <div />}
           </div>
+
+          {/* Comments section */}
+          {showComments && (
+            <div className={`mt-8 pt-6 border-t ${theme === 'dark' ? 'border-white/10' : theme === 'sepia' ? 'border-[#c4a882]' : 'border-border'}`}>
+              <h3 className={`text-lg font-bold font-serif ${ts.text} mb-4 flex items-center gap-2`}>
+                <MessageSquare className="h-5 w-5" /> Kòmantè ({comments.length})
+              </h3>
+
+              {/* Comment input */}
+              <div className="flex gap-2 mb-6">
+                <input
+                  type="text"
+                  value={commentText}
+                  onChange={e => setCommentText(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && submitComment()}
+                  placeholder="Ekri yon kòmantè..."
+                  className={`flex-1 rounded-xl border px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring ${
+                    theme === 'dark' ? 'border-white/20 bg-white/5 text-white placeholder:text-white/40' :
+                    theme === 'sepia' ? 'border-[#c4a882] bg-[#ede0c8] text-[#5b4636]' :
+                    'border-border bg-background text-foreground'
+                  }`}
+                />
+                <button onClick={submitComment} disabled={submittingComment || !commentText.trim()}
+                  className="px-4 py-3 rounded-xl gradient-brand text-white font-bold hover:opacity-90 disabled:opacity-50 shadow-lg">
+                  <Send className="h-4 w-4" />
+                </button>
+              </div>
+
+              {/* Comment list */}
+              <div className="space-y-3">
+                {comments.map((c: any) => (
+                  <div key={c.id} className={`p-4 rounded-xl ${
+                    theme === 'dark' ? 'bg-white/5 border border-white/10' :
+                    theme === 'sepia' ? 'bg-[#ede0c8] border border-[#c4a882]' :
+                    'bg-card border border-border'
+                  }`}>
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="h-7 w-7 rounded-full gradient-brand flex items-center justify-center text-white text-xs font-bold">
+                        {((c as any).profiles?.display_name || "U")[0].toUpperCase()}
+                      </div>
+                      <span className={`text-sm font-semibold ${ts.text}`}>{(c as any).profiles?.display_name || "Anonim"}</span>
+                      <span className={`text-xs ${ts.text} opacity-40`}>{new Date(c.created_at).toLocaleDateString()}</span>
+                    </div>
+                    <p className={`text-sm ${ts.text} opacity-80`}>{c.content}</p>
+                  </div>
+                ))}
+                {comments.length === 0 && <p className={`text-center py-6 text-sm ${ts.text} opacity-40`}>Pa gen kòmantè ankò. Ou ka premye a!</p>}
+              </div>
+            </div>
+          )}
         </div>
       </main>
+
       <Footer />
-      {/* Unlock dialog */}
       {showUnlockDialog && <UnlockDialog chapter={pendingChapter} coins={profile?.coins ?? 0} onConfirm={confirmUnlock} onCancel={() => { setShowUnlockDialog(false); setPendingChapter(null); }} loading={unlocking} />}
     </div>
   );
 };
 
-// Unlock confirmation dialog
 const UnlockDialog = ({ chapter, coins, onConfirm, onCancel, loading }: {
   chapter: any; coins: number; onConfirm: () => void; onCancel: () => void; loading: boolean;
 }) => {
@@ -230,13 +480,9 @@ const UnlockDialog = ({ chapter, coins, onConfirm, onCancel, loading }: {
             Chapit sa a koute <strong className="text-foreground">{chapter?.coin_price} coins</strong>.
             <br />Ou gen <strong className={hasEnough ? "text-primary" : "text-destructive"}>{coins} coins</strong>.
           </p>
-          {!hasEnough && (
-            <p className="text-destructive text-sm font-medium mb-4">Pa gen ase coins! Ale nan pwofil ou pou achte plis.</p>
-          )}
+          {!hasEnough && <p className="text-destructive text-sm font-medium mb-4">Pa gen ase coins!</p>}
           <div className="flex gap-3">
-            <button onClick={onCancel} className="flex-1 px-4 py-2.5 rounded-xl border border-border text-foreground font-medium hover:bg-secondary">
-              Anile
-            </button>
+            <button onClick={onCancel} className="flex-1 px-4 py-2.5 rounded-xl border border-border text-foreground font-medium hover:bg-secondary">Anile</button>
             <button onClick={onConfirm} disabled={!hasEnough || loading}
               className="flex-1 px-4 py-2.5 rounded-xl gradient-brand text-primary-foreground font-bold hover:opacity-90 disabled:opacity-50">
               {loading ? "..." : `Debloke (${chapter?.coin_price} coins)`}
