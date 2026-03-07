@@ -1,7 +1,7 @@
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import { useState, useMemo } from "react";
-import { BookOpen, Coins, BarChart3, FileText, Plus, Trash2, Edit, Save, X, Eye, EyeOff, Key, Calendar, AlertTriangle, Image, Upload, MessageSquare } from "lucide-react";
+import { useState, useRef } from "react";
+import { BookOpen, Coins, BarChart3, FileText, Plus, Trash2, Edit, Save, X, Eye, EyeOff, Key, Calendar, AlertTriangle, Image, Upload, MessageSquare, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdminNovels, useAdminChapters, GENRES } from "@/hooks/useNovels";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
@@ -17,8 +17,8 @@ const TABS = [
   { id: "stats", label: "Statistik", icon: BarChart3 },
 ];
 
-const ConfirmDialog = ({ title, message, onConfirm, onCancel, destructive = false }: {
-  title: string; message: string; onConfirm: () => void; onCancel: () => void; destructive?: boolean;
+const ConfirmDialog = ({ title, message, onConfirm, onCancel, destructive = false, loading = false }: {
+  title: string; message: string; onConfirm: () => void; onCancel: () => void; destructive?: boolean; loading?: boolean;
 }) => (
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm" onClick={onCancel}>
     <div className="bg-card border border-border rounded-2xl p-6 max-w-sm w-full mx-4 shadow-2xl" onClick={e => e.stopPropagation()}>
@@ -30,10 +30,11 @@ const ConfirmDialog = ({ title, message, onConfirm, onCancel, destructive = fals
       </div>
       <p className="text-muted-foreground text-sm mb-6">{message}</p>
       <div className="flex gap-3">
-        <button onClick={onCancel} className="flex-1 px-4 py-3 rounded-xl border border-border text-foreground font-medium hover:bg-secondary text-sm">Anile</button>
-        <button onClick={onConfirm}
-          className={`flex-1 px-4 py-3 rounded-xl font-bold text-sm ${destructive ? "bg-destructive text-destructive-foreground hover:opacity-90" : "gradient-brand text-primary-foreground hover:opacity-90"}`}>
-          Konfime
+        <button onClick={onCancel} disabled={loading} className="flex-1 px-4 py-3 rounded-xl border border-border text-foreground font-medium hover:bg-secondary text-sm disabled:opacity-50">Anile</button>
+        <button onClick={onConfirm} disabled={loading}
+          className={`flex-1 px-4 py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 ${destructive ? "bg-destructive text-destructive-foreground hover:opacity-90" : "gradient-brand text-primary-foreground hover:opacity-90"} disabled:opacity-50`}>
+          {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+          {loading ? "Ap trete..." : "Konfime"}
         </button>
       </div>
     </div>
@@ -41,24 +42,39 @@ const ConfirmDialog = ({ title, message, onConfirm, onCancel, destructive = fals
 );
 
 const QUILL_MODULES = {
-  toolbar: [
-    [{ header: [1, 2, 3, false] }],
-    ["bold", "italic", "underline", "strike"],
-    [{ list: "ordered" }, { list: "bullet" }],
-    ["blockquote"],
-    ["link", "image"],
-    [{ align: [] }],
-    ["clean"],
-  ],
+  toolbar: {
+    container: [
+      [{ header: [1, 2, 3, false] }],
+      ["bold", "italic", "underline", "strike"],
+      [{ list: "ordered" }, { list: "bullet" }],
+      ["blockquote"],
+      ["link", "image"],
+      [{ align: [] }],
+      ["clean"],
+    ],
+  },
 };
 
 const Admin = () => {
   const [tab, setTab] = useState("novels");
   const queryClient = useQueryClient();
-  const [confirmAction, setConfirmAction] = useState<{ title: string; message: string; action: () => void; destructive?: boolean } | null>(null);
+  const [confirmAction, setConfirmAction] = useState<{ title: string; message: string; action: () => Promise<void>; destructive?: boolean } | null>(null);
+  const [confirmLoading, setConfirmLoading] = useState(false);
+  const quillRef = useRef<any>(null);
 
-  const withConfirm = (title: string, message: string, action: () => void, destructive = false) => {
+  const withConfirm = (title: string, message: string, action: () => Promise<void>, destructive = false) => {
     setConfirmAction({ title, message, action, destructive });
+  };
+
+  const handleConfirm = async () => {
+    if (!confirmAction) return;
+    setConfirmLoading(true);
+    try {
+      await confirmAction.action();
+    } finally {
+      setConfirmLoading(false);
+      setConfirmAction(null);
+    }
   };
 
   // Novel form
@@ -66,15 +82,18 @@ const Admin = () => {
   const [novelForm, setNovelForm] = useState({ title: "", author: "", description: "", genre: "Dram" as string, scheduled_at: "" });
   const [editingNovel, setEditingNovel] = useState<string | null>(null);
   const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [savingNovel, setSavingNovel] = useState(false);
 
   // Chapter form
   const [selectedNovelId, setSelectedNovelId] = useState<string>("");
   const [showChapterForm, setShowChapterForm] = useState(false);
   const [chapterForm, setChapterForm] = useState({ title: "", content: "", chapter_number: 1, is_premium: false, coin_price: 0, status: "draft", scheduled_at: "" });
+  const [savingChapter, setSavingChapter] = useState(false);
 
   // Code form
   const [showCodeForm, setShowCodeForm] = useState(false);
   const [codeForm, setCodeForm] = useState({ code: "", coins: 10, max_uses: 1 });
+  const [savingCode, setSavingCode] = useState(false);
 
   const { data: novels = [], isLoading: novelsLoading } = useAdminNovels();
   const { data: chapters = [] } = useAdminChapters(selectedNovelId || undefined);
@@ -87,7 +106,6 @@ const Admin = () => {
     },
   });
 
-  // Comments for moderation
   const { data: allComments = [] } = useQuery({
     queryKey: ["admin_comments"],
     queryFn: async () => {
@@ -99,36 +117,39 @@ const Admin = () => {
   // ===== NOVEL CRUD =====
   const saveNovel = async () => {
     if (!novelForm.title || !novelForm.author) { toast.error("Tit ak otè obligatwa"); return; }
-    const scheduled = novelForm.scheduled_at ? new Date(novelForm.scheduled_at).toISOString() : null;
-    const status = novelForm.scheduled_at ? "draft" : "published";
+    if (savingNovel) return;
 
     const doSave = async () => {
-      let cover_url: string | null = null;
-      if (coverFile) {
-        const ext = coverFile.name.split(".").pop();
-        const path = `covers/${Date.now()}.${ext}`;
-        const { error: upErr } = await supabase.storage.from("chapter-images").upload(path, coverFile);
-        if (upErr) { toast.error("Erè upload: " + upErr.message); return; }
-        const { data: urlData } = supabase.storage.from("chapter-images").getPublicUrl(path);
-        cover_url = urlData.publicUrl;
-      }
-
-      if (editingNovel) {
-        const updateData: any = { title: novelForm.title, author: novelForm.author, description: novelForm.description, genre: novelForm.genre as any, scheduled_at: scheduled };
-        if (cover_url) updateData.cover_url = cover_url;
-        const { error } = await supabase.from("novels").update(updateData).eq("id", editingNovel);
-        if (error) { toast.error(error.message); return; }
-        toast.success("Novèl modifye!");
-      } else {
-        const insertData: any = { title: novelForm.title, author: novelForm.author, description: novelForm.description, genre: novelForm.genre as any, status, scheduled_at: scheduled };
-        if (cover_url) insertData.cover_url = cover_url;
-        const { error } = await supabase.from("novels").insert(insertData);
-        if (error) { toast.error(error.message); return; }
-        toast.success("Novèl kreye!");
-      }
-      setShowNovelForm(false); setEditingNovel(null); setCoverFile(null);
-      setNovelForm({ title: "", author: "", description: "", genre: "Dram", scheduled_at: "" });
-      queryClient.invalidateQueries({ queryKey: ["novels"] });
+      setSavingNovel(true);
+      try {
+        const scheduled = novelForm.scheduled_at ? new Date(novelForm.scheduled_at).toISOString() : null;
+        const status = novelForm.scheduled_at ? "draft" : "published";
+        let cover_url: string | null = null;
+        if (coverFile) {
+          const ext = coverFile.name.split(".").pop();
+          const path = `covers/${Date.now()}.${ext}`;
+          const { error: upErr } = await supabase.storage.from("chapter-images").upload(path, coverFile);
+          if (upErr) { toast.error("Erè upload: " + upErr.message); return; }
+          const { data: urlData } = supabase.storage.from("chapter-images").getPublicUrl(path);
+          cover_url = urlData.publicUrl;
+        }
+        if (editingNovel) {
+          const updateData: any = { title: novelForm.title, author: novelForm.author, description: novelForm.description, genre: novelForm.genre as any, scheduled_at: scheduled };
+          if (cover_url) updateData.cover_url = cover_url;
+          const { error } = await supabase.from("novels").update(updateData).eq("id", editingNovel);
+          if (error) { toast.error(error.message); return; }
+          toast.success("Novèl modifye!");
+        } else {
+          const insertData: any = { title: novelForm.title, author: novelForm.author, description: novelForm.description, genre: novelForm.genre as any, status, scheduled_at: scheduled };
+          if (cover_url) insertData.cover_url = cover_url;
+          const { error } = await supabase.from("novels").insert(insertData);
+          if (error) { toast.error(error.message); return; }
+          toast.success("Novèl kreye!");
+        }
+        setShowNovelForm(false); setEditingNovel(null); setCoverFile(null);
+        setNovelForm({ title: "", author: "", description: "", genre: "Dram", scheduled_at: "" });
+        queryClient.invalidateQueries({ queryKey: ["novels"] });
+      } finally { setSavingNovel(false); }
     };
     withConfirm(editingNovel ? "Modifye Novèl" : "Kreye Novèl", `Ou sèten ou vle ${editingNovel ? "modifye" : "kreye"} novèl "${novelForm.title}"?`, doSave);
   };
@@ -158,20 +179,24 @@ const Admin = () => {
   const saveChapter = async () => {
     if (!selectedNovelId) { toast.error("Chwazi yon novèl"); return; }
     if (!chapterForm.title || !chapterForm.content) { toast.error("Tit ak kontni obligatwa"); return; }
-    const scheduled = chapterForm.scheduled_at ? new Date(chapterForm.scheduled_at).toISOString() : null;
-    const status = chapterForm.scheduled_at ? "draft" : chapterForm.status;
+    if (savingChapter) return;
 
     withConfirm("Ajoute Chapit", `Kreye chapit "${chapterForm.title}"?`, async () => {
-      const { error } = await supabase.from("chapters").insert({
-        novel_id: selectedNovelId, title: chapterForm.title, content: chapterForm.content,
-        chapter_number: chapterForm.chapter_number, is_premium: chapterForm.is_premium,
-        coin_price: chapterForm.is_premium ? chapterForm.coin_price : 0, status, scheduled_at: scheduled,
-      });
-      if (error) { toast.error(error.message); return; }
-      toast.success("Chapit ajoute!");
-      setShowChapterForm(false);
-      setChapterForm({ title: "", content: "", chapter_number: chapters.length + 2, is_premium: false, coin_price: 0, status: "draft", scheduled_at: "" });
-      queryClient.invalidateQueries({ queryKey: ["chapters"] });
+      setSavingChapter(true);
+      try {
+        const scheduled = chapterForm.scheduled_at ? new Date(chapterForm.scheduled_at).toISOString() : null;
+        const status = chapterForm.scheduled_at ? "draft" : chapterForm.status;
+        const { error } = await supabase.from("chapters").insert({
+          novel_id: selectedNovelId, title: chapterForm.title, content: chapterForm.content,
+          chapter_number: chapterForm.chapter_number, is_premium: chapterForm.is_premium,
+          coin_price: chapterForm.is_premium ? chapterForm.coin_price : 0, status, scheduled_at: scheduled,
+        });
+        if (error) { toast.error(error.message); return; }
+        toast.success("Chapit ajoute!");
+        setShowChapterForm(false);
+        setChapterForm({ title: "", content: "", chapter_number: chapters.length + 2, is_premium: false, coin_price: 0, status: "draft", scheduled_at: "" });
+        queryClient.invalidateQueries({ queryKey: ["chapters"] });
+      } finally { setSavingChapter(false); }
     });
   };
 
@@ -198,13 +223,18 @@ const Admin = () => {
   // ===== CODE CRUD =====
   const saveCode = async () => {
     if (!codeForm.code.trim()) { toast.error("Kòd obligatwa"); return; }
+    if (savingCode) return;
+
     withConfirm("Kreye Kòd", `Kreye kòd "${codeForm.code.toUpperCase()}" ak ${codeForm.coins} coins?`, async () => {
-      const { error } = await supabase.from("coin_codes").insert({ code: codeForm.code.trim().toUpperCase(), coins: codeForm.coins, max_uses: codeForm.max_uses });
-      if (error) { toast.error(error.message); return; }
-      toast.success("Kòd kreye!");
-      setShowCodeForm(false);
-      setCodeForm({ code: "", coins: 10, max_uses: 1 });
-      queryClient.invalidateQueries({ queryKey: ["coin_codes"] });
+      setSavingCode(true);
+      try {
+        const { error } = await supabase.from("coin_codes").insert({ code: codeForm.code.trim().toUpperCase(), coins: codeForm.coins, max_uses: codeForm.max_uses });
+        if (error) { toast.error(error.message); return; }
+        toast.success("Kòd kreye!");
+        setShowCodeForm(false);
+        setCodeForm({ code: "", coins: 10, max_uses: 1 });
+        queryClient.invalidateQueries({ queryKey: ["coin_codes"] });
+      } finally { setSavingCode(false); }
     });
   };
 
@@ -231,7 +261,7 @@ const Admin = () => {
     }, true);
   };
 
-  // Image upload handler for Quill
+  // Image upload handler - inserts directly into Quill editor
   const handleImageUpload = async () => {
     const input = document.createElement("input");
     input.type = "file";
@@ -242,12 +272,23 @@ const Admin = () => {
       if (file.size > 5 * 1024 * 1024) { toast.error("Imaj twò gwo (max 5MB)"); return; }
       const ext = file.name.split(".").pop()?.toLowerCase();
       if (!["jpg", "jpeg", "png", "webp"].includes(ext || "")) { toast.error("Fòma pa sipòte. Itilize jpg, png oswa webp."); return; }
+      
+      toast.info("Ap upload imaj...");
       const path = `chapters/${Date.now()}.${ext}`;
       const { error } = await supabase.storage.from("chapter-images").upload(path, file);
       if (error) { toast.error("Erè upload: " + error.message); return; }
       const { data } = supabase.storage.from("chapter-images").getPublicUrl(path);
-      const imgTag = `<img src="${data.publicUrl}" alt="scene" style="max-width:100%;border-radius:12px;margin:16px 0" />`;
-      setChapterForm(p => ({ ...p, content: p.content + "\n" + imgTag }));
+      
+      // Insert into Quill editor at cursor position
+      const quill = quillRef.current?.getEditor?.();
+      if (quill) {
+        const range = quill.getSelection(true);
+        quill.insertEmbed(range.index, 'image', data.publicUrl);
+        quill.setSelection(range.index + 1);
+      } else {
+        // Fallback: append to content
+        setChapterForm(p => ({ ...p, content: p.content + `<p><img src="${data.publicUrl}" /></p>` }));
+      }
       toast.success("Imaj ajoute!");
     };
     input.click();
@@ -307,8 +348,8 @@ const Admin = () => {
                       </select>
                     </div>
                     <div>
-                      <label className="text-sm font-medium text-foreground block mb-1.5 flex items-center gap-1">
-                        <Calendar className="h-4 w-4" /> Piblikasyon planifye
+                      <label className="text-sm font-medium text-foreground block mb-1.5">
+                        <span className="flex items-center gap-1"><Calendar className="h-4 w-4" /> Piblikasyon planifye</span>
                       </label>
                       <input type="datetime-local" value={novelForm.scheduled_at} onChange={e => setNovelForm(p => ({ ...p, scheduled_at: e.target.value }))}
                         className="w-full rounded-xl border border-input bg-background px-4 py-3 text-sm text-foreground" />
@@ -320,14 +361,16 @@ const Admin = () => {
                       className="w-full rounded-xl border border-input bg-background px-4 py-3 text-sm text-foreground resize-y" placeholder="Kèk mo sou novèl la" />
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-foreground block mb-1.5 flex items-center gap-1">
-                      <Image className="h-4 w-4" /> Kouvèti (jpg, png, webp)
+                    <label className="text-sm font-medium text-foreground block mb-1.5">
+                      <span className="flex items-center gap-1"><Image className="h-4 w-4" /> Kouvèti (jpg, png, webp)</span>
                     </label>
                     <input type="file" accept="image/jpeg,image/png,image/webp" onChange={e => setCoverFile(e.target.files?.[0] || null)}
                       className="w-full text-sm text-foreground file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20" />
                   </div>
-                  <button onClick={saveNovel} className="inline-flex items-center gap-2 px-6 py-3 rounded-xl gradient-brand text-primary-foreground font-bold text-sm hover:opacity-90 shadow-lg active:scale-95">
-                    <Save className="h-5 w-5" /> {editingNovel ? "Anrejistre" : "Kreye"}
+                  <button onClick={saveNovel} disabled={savingNovel}
+                    className="inline-flex items-center gap-2 px-6 py-3 rounded-xl gradient-brand text-primary-foreground font-bold text-sm hover:opacity-90 shadow-lg active:scale-95 disabled:opacity-50">
+                    {savingNovel ? <Loader2 className="h-5 w-5 animate-spin" /> : <Save className="h-5 w-5" />}
+                    {savingNovel ? "Ap trete..." : editingNovel ? "Anrejistre" : "Kreye"}
                   </button>
                 </div>
               )}
@@ -417,8 +460,8 @@ const Admin = () => {
                       )}
                     </div>
                     <div>
-                      <label className="text-sm font-medium text-foreground block mb-1.5 flex items-center gap-1">
-                        <Calendar className="h-4 w-4" /> Piblikasyon planifye
+                      <label className="text-sm font-medium text-foreground block mb-1.5">
+                        <span className="flex items-center gap-1"><Calendar className="h-4 w-4" /> Piblikasyon planifye</span>
                       </label>
                       <input type="datetime-local" value={chapterForm.scheduled_at} onChange={e => setChapterForm(p => ({ ...p, scheduled_at: e.target.value }))}
                         className="w-full rounded-xl border border-input bg-background px-4 py-3 text-sm text-foreground" />
@@ -429,12 +472,13 @@ const Admin = () => {
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
                       <label className="text-sm font-medium text-foreground">Kontni *</label>
-                      <button onClick={handleImageUpload} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-xs font-semibold hover:bg-primary/20">
-                        <Upload className="h-3.5 w-3.5" /> Ajoute Imaj
+                      <button onClick={handleImageUpload} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary/10 text-primary text-sm font-bold hover:bg-primary/20 active:scale-95 transition-all">
+                        <Upload className="h-4 w-4" /> Ajoute Imaj
                       </button>
                     </div>
                     <div className="border border-input rounded-xl overflow-hidden bg-background">
                       <ReactQuill
+                        ref={quillRef}
                         theme="snow"
                         value={chapterForm.content}
                         onChange={(value) => setChapterForm(p => ({ ...p, content: value }))}
@@ -443,7 +487,7 @@ const Admin = () => {
                         className="min-h-[300px]"
                       />
                     </div>
-                    <p className="text-[11px] text-muted-foreground mt-1">Tip: Itilize "---pagebreak---" pou ajoute so paj manyèl.</p>
+                    <p className="text-[11px] text-muted-foreground mt-1">Tip: Itilize bouton "Ajoute Imaj" pou upload imaj dirèkteman nan editè a.</p>
                   </div>
 
                   <div className="flex flex-wrap items-center gap-3">
@@ -454,8 +498,10 @@ const Admin = () => {
                         <option value="published">Pibliye kounye a</option>
                       </select>
                     )}
-                    <button onClick={saveChapter} className="inline-flex items-center gap-2 px-6 py-3 rounded-xl gradient-brand text-primary-foreground font-bold text-sm hover:opacity-90 shadow-lg active:scale-95">
-                      <Save className="h-5 w-5" /> Anrejistre
+                    <button onClick={saveChapter} disabled={savingChapter}
+                      className="inline-flex items-center gap-2 px-6 py-3 rounded-xl gradient-brand text-primary-foreground font-bold text-sm hover:opacity-90 shadow-lg active:scale-95 disabled:opacity-50">
+                      {savingChapter ? <Loader2 className="h-5 w-5 animate-spin" /> : <Save className="h-5 w-5" />}
+                      {savingChapter ? "Ap trete..." : "Anrejistre"}
                     </button>
                   </div>
                 </div>
@@ -531,8 +577,10 @@ const Admin = () => {
                         className="w-full rounded-xl border border-input bg-background px-4 py-3 text-sm text-foreground" />
                     </div>
                   </div>
-                  <button onClick={saveCode} className="inline-flex items-center gap-2 px-6 py-3 rounded-xl gradient-brand text-primary-foreground font-bold text-sm hover:opacity-90 shadow-lg active:scale-95">
-                    <Save className="h-5 w-5" /> Kreye Kòd
+                  <button onClick={saveCode} disabled={savingCode}
+                    className="inline-flex items-center gap-2 px-6 py-3 rounded-xl gradient-brand text-primary-foreground font-bold text-sm hover:opacity-90 shadow-lg active:scale-95 disabled:opacity-50">
+                    {savingCode ? <Loader2 className="h-5 w-5 animate-spin" /> : <Save className="h-5 w-5" />}
+                    {savingCode ? "Ap trete..." : "Kreye Kòd"}
                   </button>
                 </div>
               )}
@@ -617,7 +665,7 @@ const Admin = () => {
       <Footer />
       {confirmAction && (
         <ConfirmDialog title={confirmAction.title} message={confirmAction.message} destructive={confirmAction.destructive}
-          onConfirm={() => { confirmAction.action(); setConfirmAction(null); }} onCancel={() => setConfirmAction(null)} />
+          onConfirm={handleConfirm} onCancel={() => setConfirmAction(null)} loading={confirmLoading} />
       )}
     </div>
   );
