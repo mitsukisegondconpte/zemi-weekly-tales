@@ -1,7 +1,7 @@
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { ChevronLeft, ChevronRight, Lock, Coins, Sun, Moon, BookOpen, Type, Minus, Plus, MessageSquare, Send } from "lucide-react";
+import { ChevronLeft, ChevronRight, Lock, Coins, Type, Minus, Plus, MessageSquare, Send, BookOpen } from "lucide-react";
 import { useChapter, useChapters } from "@/hooks/useNovels";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,14 +12,13 @@ import { Progress } from "@/components/ui/progress";
 
 type ReadingTheme = "light" | "dark" | "sepia";
 
-const THEME_STYLES: Record<ReadingTheme, { bg: string; text: string; label: string }> = {
-  light: { bg: "bg-white", text: "text-gray-900", label: "Klè" },
-  dark: { bg: "bg-[#1a1a2e]", text: "text-gray-200", label: "Nwa" },
-  sepia: { bg: "bg-[#f4ecd8]", text: "text-[#5b4636]", label: "Sepia" },
+const THEME_STYLES: Record<ReadingTheme, { bg: string; text: string; label: string; icon: string }> = {
+  light: { bg: "bg-white", text: "text-gray-900", label: "Klè", icon: "☀️" },
+  dark: { bg: "bg-[#1a1a2e]", text: "text-gray-200", label: "Nwa", icon: "🌙" },
+  sepia: { bg: "bg-[#f4ecd8]", text: "text-[#5b4636]", label: "Sepia", icon: "📜" },
 };
 
 const PARAGRAPHS_PER_PAGE = 12;
-const PAGE_BREAK_MARKER = "---pagebreak---";
 
 const ChapterReader = () => {
   const { novelId, chapterId } = useParams();
@@ -37,27 +36,20 @@ const ChapterReader = () => {
   const [submittingComment, setSubmittingComment] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
 
-  // Reading preferences
   const [theme, setTheme] = useState<ReadingTheme>(() =>
     (localStorage.getItem("reading-theme") as ReadingTheme) || "light"
   );
   const [fontSize, setFontSize] = useState(() => parseInt(localStorage.getItem("reading-font-size") || "18"));
   const [maxWidth, setMaxWidth] = useState(() => parseInt(localStorage.getItem("reading-max-width") || "720"));
-
-  // Pagination
   const [currentPage, setCurrentPage] = useState(0);
-
-  // Progress
   const [scrollProgress, setScrollProgress] = useState(0);
 
-  // Save preferences
   useEffect(() => {
     localStorage.setItem("reading-theme", theme);
     localStorage.setItem("reading-font-size", String(fontSize));
     localStorage.setItem("reading-max-width", String(maxWidth));
   }, [theme, fontSize, maxWidth]);
 
-  // Restore page position
   useEffect(() => {
     if (chapterId) {
       const saved = localStorage.getItem(`page-${chapterId}`);
@@ -66,12 +58,10 @@ const ChapterReader = () => {
     }
   }, [chapterId]);
 
-  // Save page position
   useEffect(() => {
     if (chapterId) localStorage.setItem(`page-${chapterId}`, String(currentPage));
   }, [currentPage, chapterId]);
 
-  // Scroll progress tracking
   useEffect(() => {
     const handleScroll = () => {
       const scrollTop = window.scrollY;
@@ -82,7 +72,6 @@ const ChapterReader = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Force login
   useEffect(() => {
     if (!user && !isLoading) {
       toast.error("Ou dwe konekte pou li.");
@@ -90,7 +79,6 @@ const ChapterReader = () => {
     }
   }, [user, isLoading, navigate]);
 
-  // Check unlocked chapters
   const { data: unlockedIds = [] } = useQuery({
     queryKey: ["unlocked", novelId, user?.id],
     enabled: !!user && !!novelId,
@@ -100,7 +88,6 @@ const ChapterReader = () => {
     },
   });
 
-  // Track reading history
   useEffect(() => {
     if (user && chapterId && novelId && chapter) {
       supabase.from("reading_history").upsert(
@@ -110,7 +97,6 @@ const ChapterReader = () => {
     }
   }, [user, chapterId, novelId, chapter]);
 
-  // Copy protection for premium
   useEffect(() => {
     if (!chapter?.is_premium) return;
     const prevent = (e: Event) => e.preventDefault();
@@ -133,6 +119,7 @@ const ChapterReader = () => {
         .from("comments")
         .select("*, profiles:user_id(display_name)")
         .eq("chapter_id", chapterId!)
+        .eq("is_approved", true)
         .order("created_at", { ascending: true });
       return data ?? [];
     },
@@ -151,17 +138,30 @@ const ChapterReader = () => {
     toast.success("Kòmantè ajoute!");
   };
 
-  // Paginate content
+  // Paginate: use HTML content, split by blocks
   const pages = useMemo(() => {
     if (!chapter?.content) return [[""]];
-    // Check for manual page breaks first
-    if (chapter.content.includes(PAGE_BREAK_MARKER)) {
-      return chapter.content.split(PAGE_BREAK_MARKER).map(section =>
-        section.split("\n").filter(p => p.trim())
-      );
+    const content = chapter.content;
+    // If content is HTML (from Quill), render as single block per page
+    if (content.includes("<")) {
+      // Split HTML by paragraphs/blocks
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(content, "text/html");
+      const blocks: string[] = [];
+      doc.body.childNodes.forEach(node => {
+        const el = node as HTMLElement;
+        if (el.outerHTML) blocks.push(el.outerHTML);
+        else if (el.textContent?.trim()) blocks.push(`<p>${el.textContent}</p>`);
+      });
+      if (blocks.length === 0) return [[content]];
+      const result: string[][] = [];
+      for (let i = 0; i < blocks.length; i += PARAGRAPHS_PER_PAGE) {
+        result.push([blocks.slice(i, i + PARAGRAPHS_PER_PAGE).join("")]);
+      }
+      return result;
     }
-    // Auto-paginate by paragraphs
-    const allParagraphs = chapter.content.split("\n").filter(p => p.trim());
+    // Plain text
+    const allParagraphs = content.split("\n").filter(p => p.trim());
     const result: string[][] = [];
     for (let i = 0; i < allParagraphs.length; i += PARAGRAPHS_PER_PAGE) {
       result.push(allParagraphs.slice(i, i + PARAGRAPHS_PER_PAGE));
@@ -246,25 +246,35 @@ const ChapterReader = () => {
 
       {/* Sticky toolbar */}
       <div className={`sticky top-0 z-50 border-b ${theme === 'dark' ? 'border-white/10 bg-[#1a1a2e]/95' : theme === 'sepia' ? 'border-[#c4a882] bg-[#f4ecd8]/95' : 'border-border bg-white/95'} backdrop-blur`}>
-        <div className="flex items-center justify-between px-4 py-2 max-w-4xl mx-auto">
-          <Link to={`/novel/${novelId}`} className={`flex items-center gap-1 text-sm ${ts.text} opacity-70 hover:opacity-100`}>
-            <ChevronLeft className="h-4 w-4" /> Retounen
+        <div className="flex items-center justify-between px-4 py-2.5 max-w-4xl mx-auto">
+          <Link to={`/novel/${novelId}`} className={`flex items-center gap-1.5 text-sm font-medium ${ts.text} opacity-70 hover:opacity-100`}>
+            <ChevronLeft className="h-5 w-5" /> Retounen
           </Link>
-          <div className="flex items-center gap-1">
-            <span className={`text-xs ${ts.text} opacity-60`}>
-              Chapit {chapter.chapter_number} • Paj {safePage + 1}/{totalPages}
-            </span>
-          </div>
-          <div className="flex items-center gap-1">
-            <button onClick={() => setShowSettings(!showSettings)}
-              className={`p-2 rounded-lg ${ts.text} opacity-70 hover:opacity-100 transition-all`}>
+          <span className={`text-xs font-semibold ${ts.text} opacity-60`}>
+            Ch. {chapter.chapter_number} • Paj {safePage + 1}/{totalPages}
+          </span>
+          <div className="flex items-center gap-0.5">
+            {/* Settings button - VERY VISIBLE */}
+            <button onClick={() => { setShowSettings(!showSettings); setShowComments(false); }}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-bold transition-all active:scale-95 ${
+                showSettings
+                  ? "gradient-brand text-white shadow-md"
+                  : `${theme === 'dark' ? 'bg-white/10 text-white' : theme === 'sepia' ? 'bg-[#d4c4a8] text-[#5b4636]' : 'bg-secondary text-secondary-foreground'}`
+              }`}>
               <Type className="h-4 w-4" />
+              <span className="hidden sm:inline">Tèks</span>
             </button>
-            <button onClick={() => setShowComments(!showComments)}
-              className={`p-2 rounded-lg ${ts.text} opacity-70 hover:opacity-100 transition-all relative`}>
+            {/* Comments button - VERY VISIBLE */}
+            <button onClick={() => { setShowComments(!showComments); setShowSettings(false); }}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-bold transition-all active:scale-95 relative ${
+                showComments
+                  ? "gradient-brand text-white shadow-md"
+                  : `${theme === 'dark' ? 'bg-white/10 text-white' : theme === 'sepia' ? 'bg-[#d4c4a8] text-[#5b4636]' : 'bg-secondary text-secondary-foreground'}`
+              }`}>
               <MessageSquare className="h-4 w-4" />
+              <span className="hidden sm:inline">Kòmantè</span>
               {comments.length > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-primary text-primary-foreground text-[9px] font-bold flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center shadow-md">
                   {comments.length}
                 </span>
               )}
@@ -274,48 +284,56 @@ const ChapterReader = () => {
 
         {/* Settings panel */}
         {showSettings && (
-          <div className={`border-t ${theme === 'dark' ? 'border-white/10' : theme === 'sepia' ? 'border-[#c4a882]' : 'border-border'} px-4 py-3`}>
-            <div className="max-w-4xl mx-auto space-y-3">
+          <div className={`border-t ${theme === 'dark' ? 'border-white/10' : theme === 'sepia' ? 'border-[#c4a882]' : 'border-border'} px-4 py-4`}>
+            <div className="max-w-4xl mx-auto space-y-4">
               {/* Theme selector */}
-              <div className="flex items-center gap-2">
-                <span className={`text-xs font-medium ${ts.text} opacity-60 w-16`}>Tèm</span>
-                <div className="flex gap-1.5">
+              <div>
+                <span className={`text-xs font-bold uppercase tracking-wider ${ts.text} opacity-50 block mb-2`}>Tèm Lekti</span>
+                <div className="flex gap-2">
                   {(Object.keys(THEME_STYLES) as ReadingTheme[]).map(t => (
                     <button key={t} onClick={() => setTheme(t)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                      className={`flex-1 px-4 py-3 rounded-xl text-sm font-bold transition-all active:scale-95 ${
                         theme === t
-                          ? "gradient-brand text-white shadow-md"
-                          : `${THEME_STYLES[t].bg} ${THEME_STYLES[t].text} border border-current/20`
+                          ? "gradient-brand text-white shadow-lg ring-2 ring-primary/30"
+                          : `${THEME_STYLES[t].bg} ${THEME_STYLES[t].text} border-2 border-current/10`
                       }`}>
-                      {THEME_STYLES[t].label}
+                      {THEME_STYLES[t].icon} {THEME_STYLES[t].label}
                     </button>
                   ))}
                 </div>
               </div>
 
               {/* Font size */}
-              <div className="flex items-center gap-2">
-                <span className={`text-xs font-medium ${ts.text} opacity-60 w-16`}>Tay tèks</span>
-                <button onClick={() => setFontSize(f => Math.max(14, f - 2))} className={`p-1.5 rounded-lg border ${theme === 'dark' ? 'border-white/20' : 'border-border'}`}>
-                  <Minus className={`h-3 w-3 ${ts.text}`} />
-                </button>
-                <span className={`text-sm font-bold ${ts.text} w-8 text-center`}>{fontSize}</span>
-                <button onClick={() => setFontSize(f => Math.min(28, f + 2))} className={`p-1.5 rounded-lg border ${theme === 'dark' ? 'border-white/20' : 'border-border'}`}>
-                  <Plus className={`h-3 w-3 ${ts.text}`} />
-                </button>
+              <div>
+                <span className={`text-xs font-bold uppercase tracking-wider ${ts.text} opacity-50 block mb-2`}>Tay Tèks</span>
+                <div className="flex items-center gap-3">
+                  <button onClick={() => setFontSize(f => Math.max(14, f - 2))}
+                    className={`h-10 w-10 rounded-xl flex items-center justify-center font-bold text-lg active:scale-95 ${theme === 'dark' ? 'bg-white/10 text-white' : 'bg-secondary text-secondary-foreground'}`}>
+                    A-
+                  </button>
+                  <div className="flex-1 flex items-center justify-center">
+                    <span className={`text-lg font-black ${ts.text}`}>{fontSize}px</span>
+                  </div>
+                  <button onClick={() => setFontSize(f => Math.min(28, f + 2))}
+                    className={`h-10 w-10 rounded-xl flex items-center justify-center font-bold text-lg active:scale-95 ${theme === 'dark' ? 'bg-white/10 text-white' : 'bg-secondary text-secondary-foreground'}`}>
+                    A+
+                  </button>
+                </div>
               </div>
 
               {/* Width */}
-              <div className="flex items-center gap-2">
-                <span className={`text-xs font-medium ${ts.text} opacity-60 w-16`}>Lajè</span>
-                {[600, 720, 900].map(w => (
-                  <button key={w} onClick={() => setMaxWidth(w)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                      maxWidth === w ? "gradient-brand text-white shadow-md" : `${ts.text} opacity-60 border ${theme === 'dark' ? 'border-white/20' : 'border-border'}`
-                    }`}>
-                    {w === 600 ? "Etwat" : w === 720 ? "Mwayen" : "Laj"}
-                  </button>
-                ))}
+              <div>
+                <span className={`text-xs font-bold uppercase tracking-wider ${ts.text} opacity-50 block mb-2`}>Lajè Tèks</span>
+                <div className="flex gap-2">
+                  {[{ w: 600, l: "Etwat" }, { w: 720, l: "Mwayen" }, { w: 900, l: "Laj" }].map(({ w, l }) => (
+                    <button key={w} onClick={() => setMaxWidth(w)}
+                      className={`flex-1 px-3 py-2.5 rounded-xl text-sm font-bold transition-all active:scale-95 ${
+                        maxWidth === w ? "gradient-brand text-white shadow-lg" : `${ts.text} opacity-60 border-2 ${theme === 'dark' ? 'border-white/10' : 'border-border'}`
+                      }`}>
+                      {l}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
@@ -337,14 +355,13 @@ const ChapterReader = () => {
               </div>
             )}
 
-            {/* Render current page paragraphs with HTML support */}
-            <div className={`${ts.text} space-y-6 chapter-content`}>
-              {pages[safePage]?.map((paragraph, i) => {
-                // Check if it's HTML content (has tags)
-                if (paragraph.includes("<")) {
-                  return <div key={i} dangerouslySetInnerHTML={{ __html: paragraph }} />;
+            {/* Render current page - HTML content support */}
+            <div className={`${ts.text} chapter-content`}>
+              {pages[safePage]?.map((block, i) => {
+                if (block.includes("<")) {
+                  return <div key={i} dangerouslySetInnerHTML={{ __html: block }} />;
                 }
-                return <p key={i}>{paragraph}</p>;
+                return <p key={i} className="mb-6">{block}</p>;
               })}
             </div>
           </article>
@@ -352,23 +369,21 @@ const ChapterReader = () => {
           {/* Page navigation */}
           {totalPages > 1 && (
             <div className="mt-10 space-y-4">
-              {/* Page progress */}
               <Progress value={((safePage + 1) / totalPages) * 100} className="h-2" />
-
               <div className="flex items-center justify-between">
                 <button
                   onClick={() => { setCurrentPage(p => Math.max(0, p - 1)); window.scrollTo(0, 0); }}
                   disabled={safePage === 0}
-                  className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                  className={`px-5 py-3 rounded-xl text-sm font-bold transition-all active:scale-95 ${
                     safePage === 0 ? "opacity-30 cursor-not-allowed" : "hover:opacity-80"
                   } ${theme === 'dark' ? 'bg-white/10 text-white' : theme === 'sepia' ? 'bg-[#d4c4a8] text-[#5b4636]' : 'bg-secondary text-secondary-foreground'}`}>
                   <ChevronLeft className="h-4 w-4 inline mr-1" /> Paj anvan
                 </button>
 
-                <div className="flex gap-1">
+                <div className="flex gap-1.5 flex-wrap justify-center">
                   {Array.from({ length: totalPages }, (_, i) => (
                     <button key={i} onClick={() => { setCurrentPage(i); window.scrollTo(0, 0); }}
-                      className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${
+                      className={`w-9 h-9 rounded-xl text-xs font-bold transition-all active:scale-95 ${
                         i === safePage ? "gradient-brand text-white shadow-md" : `${ts.text} opacity-40 hover:opacity-70`
                       }`}>
                       {i + 1}
@@ -379,7 +394,7 @@ const ChapterReader = () => {
                 <button
                   onClick={() => { setCurrentPage(p => Math.min(totalPages - 1, p + 1)); window.scrollTo(0, 0); }}
                   disabled={safePage >= totalPages - 1}
-                  className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                  className={`px-5 py-3 rounded-xl text-sm font-bold transition-all active:scale-95 ${
                     safePage >= totalPages - 1 ? "opacity-30 cursor-not-allowed" : "hover:opacity-80"
                   } ${theme === 'dark' ? 'bg-white/10 text-white' : theme === 'sepia' ? 'bg-[#d4c4a8] text-[#5b4636]' : 'bg-secondary text-secondary-foreground'}`}>
                   Paj swivan <ChevronRight className="h-4 w-4 inline ml-1" />
@@ -392,69 +407,77 @@ const ChapterReader = () => {
           <div className={`flex items-center justify-between mt-8 pt-6 border-t ${theme === 'dark' ? 'border-white/10' : theme === 'sepia' ? 'border-[#c4a882]' : 'border-border'}`}>
             {prevChapter ? (
               <button onClick={() => handleNavigateChapter(prevChapter)}
-                className={`inline-flex items-center gap-1 px-4 py-2.5 rounded-xl text-sm font-medium ${theme === 'dark' ? 'bg-white/10 text-white' : theme === 'sepia' ? 'bg-[#d4c4a8] text-[#5b4636]' : 'bg-secondary text-secondary-foreground'}`}>
-                <ChevronLeft className="h-4 w-4" /> Chapit anvan
+                className={`inline-flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-bold active:scale-95 ${theme === 'dark' ? 'bg-white/10 text-white' : theme === 'sepia' ? 'bg-[#d4c4a8] text-[#5b4636]' : 'bg-secondary text-secondary-foreground'}`}>
+                <ChevronLeft className="h-5 w-5" /> Chapit anvan
               </button>
             ) : <div />}
-            <span className={`text-sm ${ts.text} opacity-50`}>{chapter.chapter_number} / {allChapters.length}</span>
+            <span className={`text-sm font-semibold ${ts.text} opacity-50`}>{chapter.chapter_number} / {allChapters.length}</span>
             {nextChapter ? (
               <button onClick={() => handleNavigateChapter(nextChapter)}
-                className="inline-flex items-center gap-1 px-4 py-2.5 rounded-xl gradient-brand text-white text-sm font-medium hover:opacity-90 shadow-lg">
-                Chapit swivan <ChevronRight className="h-4 w-4" />
-                {nextChapter.is_premium && nextChapter.coin_price > 0 && !unlockedIds.includes(nextChapter.id) && <Lock className="h-3 w-3 ml-1" />}
+                className="inline-flex items-center gap-2 px-5 py-3 rounded-xl gradient-brand text-white text-sm font-bold hover:opacity-90 shadow-lg active:scale-95">
+                Chapit swivan <ChevronRight className="h-5 w-5" />
+                {nextChapter.is_premium && nextChapter.coin_price > 0 && !unlockedIds.includes(nextChapter.id) && <Lock className="h-4 w-4" />}
               </button>
             ) : <div />}
           </div>
 
-          {/* Comments section */}
-          {showComments && (
-            <div className={`mt-8 pt-6 border-t ${theme === 'dark' ? 'border-white/10' : theme === 'sepia' ? 'border-[#c4a882]' : 'border-border'}`}>
-              <h3 className={`text-lg font-bold font-serif ${ts.text} mb-4 flex items-center gap-2`}>
-                <MessageSquare className="h-5 w-5" /> Kòmantè ({comments.length})
-              </h3>
-
-              {/* Comment input */}
-              <div className="flex gap-2 mb-6">
-                <input
-                  type="text"
-                  value={commentText}
-                  onChange={e => setCommentText(e.target.value)}
-                  onKeyDown={e => e.key === "Enter" && submitComment()}
-                  placeholder="Ekri yon kòmantè..."
-                  className={`flex-1 rounded-xl border px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring ${
-                    theme === 'dark' ? 'border-white/20 bg-white/5 text-white placeholder:text-white/40' :
-                    theme === 'sepia' ? 'border-[#c4a882] bg-[#ede0c8] text-[#5b4636]' :
-                    'border-border bg-background text-foreground'
-                  }`}
-                />
-                <button onClick={submitComment} disabled={submittingComment || !commentText.trim()}
-                  className="px-4 py-3 rounded-xl gradient-brand text-white font-bold hover:opacity-90 disabled:opacity-50 shadow-lg">
-                  <Send className="h-4 w-4" />
-                </button>
+          {/* Comments section - ALWAYS VISIBLE at bottom */}
+          <div className={`mt-10 pt-6 border-t ${theme === 'dark' ? 'border-white/10' : theme === 'sepia' ? 'border-[#c4a882]' : 'border-border'}`}>
+            <h3 className={`text-xl font-black font-serif ${ts.text} mb-6 flex items-center gap-3`}>
+              <div className="h-10 w-10 rounded-xl gradient-brand flex items-center justify-center">
+                <MessageSquare className="h-5 w-5 text-white" />
               </div>
+              Kòmantè ({comments.length})
+            </h3>
 
-              {/* Comment list */}
-              <div className="space-y-3">
-                {comments.map((c: any) => (
-                  <div key={c.id} className={`p-4 rounded-xl ${
-                    theme === 'dark' ? 'bg-white/5 border border-white/10' :
-                    theme === 'sepia' ? 'bg-[#ede0c8] border border-[#c4a882]' :
-                    'bg-card border border-border'
-                  }`}>
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="h-7 w-7 rounded-full gradient-brand flex items-center justify-center text-white text-xs font-bold">
-                        {((c as any).profiles?.display_name || "U")[0].toUpperCase()}
-                      </div>
-                      <span className={`text-sm font-semibold ${ts.text}`}>{(c as any).profiles?.display_name || "Anonim"}</span>
-                      <span className={`text-xs ${ts.text} opacity-40`}>{new Date(c.created_at).toLocaleDateString()}</span>
-                    </div>
-                    <p className={`text-sm ${ts.text} opacity-80`}>{c.content}</p>
-                  </div>
-                ))}
-                {comments.length === 0 && <p className={`text-center py-6 text-sm ${ts.text} opacity-40`}>Pa gen kòmantè ankò. Ou ka premye a!</p>}
-              </div>
+            {/* Comment input */}
+            <div className="flex gap-3 mb-6">
+              <input
+                type="text"
+                value={commentText}
+                onChange={e => setCommentText(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && submitComment()}
+                placeholder="Ekri yon kòmantè..."
+                className={`flex-1 rounded-xl border-2 px-4 py-3.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary transition-all ${
+                  theme === 'dark' ? 'border-white/20 bg-white/5 text-white placeholder:text-white/40' :
+                  theme === 'sepia' ? 'border-[#c4a882] bg-[#ede0c8] text-[#5b4636]' :
+                  'border-border bg-background text-foreground'
+                }`}
+              />
+              <button onClick={submitComment} disabled={submittingComment || !commentText.trim()}
+                className="px-5 py-3.5 rounded-xl gradient-brand text-white font-bold hover:opacity-90 disabled:opacity-50 shadow-lg active:scale-95 flex items-center gap-2">
+                <Send className="h-5 w-5" />
+                <span className="hidden sm:inline">Voye</span>
+              </button>
             </div>
-          )}
+
+            {/* Comment list */}
+            <div className="space-y-3">
+              {comments.map((c: any) => (
+                <div key={c.id} className={`p-4 rounded-xl ${
+                  theme === 'dark' ? 'bg-white/5 border border-white/10' :
+                  theme === 'sepia' ? 'bg-[#ede0c8] border border-[#c4a882]' :
+                  'bg-card border border-border'
+                }`}>
+                  <div className="flex items-center gap-2.5 mb-2">
+                    <div className="h-8 w-8 rounded-full gradient-brand flex items-center justify-center text-white text-xs font-bold shadow-sm">
+                      {((c as any).profiles?.display_name || "U")[0].toUpperCase()}
+                    </div>
+                    <span className={`text-sm font-bold ${ts.text}`}>{(c as any).profiles?.display_name || "Anonim"}</span>
+                    <span className={`text-xs ${ts.text} opacity-40`}>{new Date(c.created_at).toLocaleDateString()}</span>
+                  </div>
+                  <p className={`text-sm ${ts.text} opacity-80 pl-10`}>{c.content}</p>
+                </div>
+              ))}
+              {comments.length === 0 && (
+                <div className={`text-center py-10 ${ts.text} opacity-40`}>
+                  <MessageSquare className="h-10 w-10 mx-auto mb-3 opacity-30" />
+                  <p className="text-sm font-medium">Pa gen kòmantè ankò.</p>
+                  <p className="text-xs mt-1">Ou ka premye a! 🎉</p>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </main>
 
