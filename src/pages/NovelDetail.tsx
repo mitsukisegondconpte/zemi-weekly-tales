@@ -105,7 +105,7 @@ const NovelDetail = () => {
     }
     setUnlocking(true);
     try {
-      const { error } = await supabase.rpc("unlock_chapter", { _user_id: user.id, _chapter_id: pendingChapter.id });
+      const { error } = await supabase.rpc("unlock_chapter", { _chapter_id: pendingChapter.id });
       if (error) { toast.error(error.message.includes("Not enough") ? "Pa gen ase coins" : "Yon erè rive"); return; }
       await refreshProfile();
       queryClient.invalidateQueries({ queryKey: ["unlocked"] });
