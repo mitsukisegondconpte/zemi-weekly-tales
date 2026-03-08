@@ -9,6 +9,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useEffect, useCallback, useState, useMemo, useRef } from "react";
 import { Progress } from "@/components/ui/progress";
+import DOMPurify from "dompurify";
 
 type ReadingTheme = "light" | "dark" | "sepia";
 
@@ -196,7 +197,7 @@ const ChapterReader = () => {
     }
     setUnlocking(true);
     try {
-      const { error } = await supabase.rpc("unlock_chapter", { _user_id: user.id, _chapter_id: pendingChapter.id });
+      const { error } = await supabase.rpc("unlock_chapter", { _chapter_id: pendingChapter.id });
       if (error) { toast.error(error.message.includes("Not enough") ? "Pa gen ase coins" : "Yon erè rive"); return; }
       await refreshProfile();
       queryClient.invalidateQueries({ queryKey: ["unlocked"] });
@@ -359,7 +360,7 @@ const ChapterReader = () => {
             <div className={`${ts.text} chapter-content`}>
               {pages[safePage]?.map((block, i) => {
                 if (block.includes("<")) {
-                  return <div key={i} dangerouslySetInnerHTML={{ __html: block }} />;
+                  return <div key={i} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(block) }} />;
                 }
                 return <p key={i} className="mb-6">{block}</p>;
               })}
