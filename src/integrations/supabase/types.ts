@@ -468,12 +468,8 @@ export type Database = {
         Returns: boolean
       }
       publish_scheduled_content: { Args: never; Returns: undefined }
-      redeem_coin_code:
-        | { Args: { _code: string }; Returns: number }
-        | { Args: { _code: string; _user_id: string }; Returns: number }
-      unlock_chapter:
-        | { Args: { _chapter_id: string }; Returns: number }
-        | { Args: { _chapter_id: string; _user_id: string }; Returns: number }
+      redeem_coin_code: { Args: { _code: string }; Returns: number }
+      unlock_chapter: { Args: { _chapter_id: string }; Returns: number }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
