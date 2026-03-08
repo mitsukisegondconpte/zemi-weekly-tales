@@ -163,6 +163,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "comments_chapter_id_fkey"
+            columns: ["chapter_id"]
+            isOneToOne: false
+            referencedRelation: "chapters_metadata"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "comments_novel_id_fkey"
             columns: ["novel_id"]
             isOneToOne: false
@@ -397,6 +404,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "reading_history_chapter_id_fkey"
+            columns: ["chapter_id"]
+            isOneToOne: false
+            referencedRelation: "chapters_metadata"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "reading_history_novel_id_fkey"
             columns: ["novel_id"]
             isOneToOne: false
@@ -435,6 +449,13 @@ export type Database = {
             referencedRelation: "chapters"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "unlocked_chapters_chapter_id_fkey"
+            columns: ["chapter_id"]
+            isOneToOne: false
+            referencedRelation: "chapters_metadata"
+            referencedColumns: ["id"]
+          },
         ]
       }
       user_roles: {
@@ -457,9 +478,69 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      chapters_metadata: {
+        Row: {
+          chapter_number: number | null
+          coin_price: number | null
+          created_at: string | null
+          id: string | null
+          is_premium: boolean | null
+          novel_id: string | null
+          scheduled_at: string | null
+          status: string | null
+          title: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          chapter_number?: number | null
+          coin_price?: number | null
+          created_at?: string | null
+          id?: string | null
+          is_premium?: boolean | null
+          novel_id?: string | null
+          scheduled_at?: string | null
+          status?: string | null
+          title?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          chapter_number?: number | null
+          coin_price?: number | null
+          created_at?: string | null
+          id?: string | null
+          is_premium?: boolean | null
+          novel_id?: string | null
+          scheduled_at?: string | null
+          status?: string | null
+          title?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chapters_novel_id_fkey"
+            columns: ["novel_id"]
+            isOneToOne: false
+            referencedRelation: "novels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
+      get_chapter_content: {
+        Args: { _chapter_id: string }
+        Returns: {
+          chapter_number: number
+          coin_price: number
+          content: string
+          created_at: string
+          id: string
+          is_premium: boolean
+          novel_id: string
+          status: string
+          title: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
