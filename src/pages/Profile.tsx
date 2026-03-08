@@ -114,7 +114,6 @@ const Profile = () => {
     setRedeeming(true);
     try {
       const { data, error } = await supabase.rpc("redeem_coin_code", {
-        _user_id: user.id,
         _code: code.trim(),
       });
       if (error) {
