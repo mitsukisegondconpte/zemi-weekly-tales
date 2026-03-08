@@ -75,13 +75,12 @@ export const useChapter = (chapterId: string | undefined) =>
     queryKey: ["chapter", chapterId],
     enabled: !!chapterId,
     queryFn: async () => {
+      // Use secure RPC that gates premium content behind unlock check
       const { data, error } = await supabase
-        .from("chapters")
-        .select("*")
-        .eq("id", chapterId!)
-        .single();
+        .rpc("get_chapter_content", { _chapter_id: chapterId! });
       if (error) throw error;
-      return data as Chapter;
+      if (!data || data.length === 0) throw new Error("Chapter not found");
+      return data[0] as Chapter;
     },
   });
 
