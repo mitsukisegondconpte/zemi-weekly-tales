@@ -86,6 +86,33 @@ const NovelDetail = () => {
     queryClient.invalidateQueries({ queryKey: ["favorite", id] });
   };
 
+  // Reaction
+  const { data: isReacted = false } = useQuery({
+    queryKey: ["reaction", id, user?.id],
+    enabled: !!user && !!id,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("novel_reactions")
+        .select("id")
+        .eq("user_id", user!.id)
+        .eq("novel_id", id!)
+        .maybeSingle();
+      return !!data;
+    },
+  });
+
+  const toggleReaction = async () => {
+    if (!user) { toast.error("Konekte pou reyaji"); navigate("/login"); return; }
+    if (isReacted) {
+      await supabase.from("novel_reactions").delete()
+        .eq("user_id", user.id).eq("novel_id", id!);
+    } else {
+      await supabase.from("novel_reactions").insert({ user_id: user.id, novel_id: id! });
+    }
+    queryClient.invalidateQueries({ queryKey: ["reaction", id] });
+    queryClient.invalidateQueries({ queryKey: ["novel", id] });
+  };
+
   const handleChapterClick = async (ch: typeof chapters[0]) => {
     if (!user) { toast.error("Ou dwe kreye yon kont pou li"); navigate("/login"); return; }
     if (!ch.is_premium || ch.coin_price === 0 || unlockedIds.includes(ch.id)) {
@@ -154,12 +181,22 @@ const NovelDetail = () => {
               {novel.description && <p className="text-muted-foreground mt-3 max-w-xl text-sm">{novel.description}</p>}
 
               <div className="flex gap-3 mt-4 flex-wrap">
+                {/* Bouton Réaction */}
+                <button onClick={toggleReaction}
+                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                    isReacted ? "gradient-brand text-primary-foreground shadow-md" : "border border-border text-foreground hover:border-primary"
+                  }`}>
+                  <Heart className={`h-4 w-4 ${isReacted ? "fill-current" : ""}`} />
+                  {novel.reactions} {isReacted ? "Reyaksyon" : "Reyaji"}
+                </button>
+
+                {/* Bouton Favoris */}
                 <button onClick={toggleFavorite}
                   className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
-                    isFavorited ? "gradient-brand text-primary-foreground shadow-md" : "border border-border text-foreground hover:border-primary"
+                    isFavorited ? "bg-secondary text-secondary-foreground shadow-md" : "border border-border text-foreground hover:border-primary"
                   }`}>
-                  <Heart className={`h-4 w-4 ${isFavorited ? "fill-current" : ""}`} />
-                  {isFavorited ? "Nan Favoris" : "Ajoute Favoris"}
+                  <BookOpen className="h-4 w-4" />
+                  {isFavorited ? "Retire Favoris" : "Ajoute Favoris"}
                 </button>
               </div>
 

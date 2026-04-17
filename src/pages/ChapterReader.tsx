@@ -113,15 +113,16 @@ const ChapterReader = () => {
 
   // Comments
   const { data: comments = [], refetch: refetchComments } = useQuery({
-    queryKey: ["comments", chapterId],
-    enabled: !!chapterId,
+    queryKey: ["comments", chapterId, user?.id],
+    enabled: !!chapterId && !!user,
     queryFn: async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("comments")
         .select("*, profiles:user_id(display_name)")
         .eq("chapter_id", chapterId!)
         .eq("is_approved", true)
         .order("created_at", { ascending: true });
+      if (error) throw error;
       return data ?? [];
     },
   });
