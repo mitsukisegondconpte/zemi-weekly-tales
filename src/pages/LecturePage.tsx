@@ -16,21 +16,33 @@ const LecturePage = () => {
     queryKey: ["reading", user?.id],
     enabled: !!user,
     queryFn: async () => {
-      const { data: unlocked } = await supabase
-        .from("unlocked_chapters")
-        .select("chapter_id, chapters(novel_id)")
-        .eq("user_id", user!.id);
-      
-      if (!unlocked || unlocked.length === 0) return [];
-      
-      const novelIds = [...new Set(unlocked.map((u: any) => u.chapters?.novel_id).filter(Boolean))];
-      if (novelIds.length === 0) return [];
+      // Utiliser reading_history qui couvre TOUS les chapitres lus (gratuits ET premium)
+      const { data: history } = await supabase
+        .from("reading_history")
+        .select("novel_id")
+        .eq("user_id", user!.id)
+        .order("read_at", { ascending: false });
+
+      if (!history || history.length === 0) return [];
+
+      // Dédupliquer les novel_ids en gardant l'ordre (plus récent en premier)
+      const seen = new Set<string>();
+      const novelIds: string[] = [];
+      history.forEach(h => {
+        if (!seen.has(h.novel_id)) {
+          seen.add(h.novel_id);
+          novelIds.push(h.novel_id);
+        }
+      });
 
       const { data: novels } = await supabase
         .from("novels")
         .select("*")
         .in("id", novelIds);
-      return novels ?? [];
+
+      // Retourner dans l'ordre de lecture (plus récent en premier)
+      const novelMap = new Map((novels ?? []).map(n => [n.id, n]));
+      return novelIds.map(id => novelMap.get(id)).filter(Boolean);
     },
   });
 

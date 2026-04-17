@@ -15,13 +15,30 @@ const ResetPassword = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Check if we have a recovery token in the URL
-    const hash = window.location.hash;
-    if (!hash.includes("type=recovery")) {
-      // No recovery token, redirect
-      toast.error("Lyen reyanitalizasyon pa valid");
-      navigate("/login");
-    }
+    let redirectTimer: ReturnType<typeof setTimeout>;
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "PASSWORD_RECOVERY") {
+        // Token valide, on reste sur la page
+        clearTimeout(redirectTimer);
+      } else if (event === "SIGNED_IN" && session) {
+        // Connexion normale, pas de reset — laisser passer
+      } else if (event === "SIGNED_OUT" || event === "INITIAL_SESSION") {
+        // Vérifier après un délai si aucun token recovery reçu
+        redirectTimer = setTimeout(async () => {
+          const { data: { session: currentSession } } = await supabase.auth.getSession();
+          if (!currentSession) {
+            toast.error("Lyen reyanitalizasyon pa valid oswa ekspire");
+            navigate("/login");
+          }
+        }, 2000);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(redirectTimer);
+    };
   }, [navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {

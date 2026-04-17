@@ -6,6 +6,8 @@ import { Search } from "lucide-react";
 import { useState, useMemo, useRef, useEffect } from "react";
 import { usePublishedNovels, GENRES } from "@/hooks/useNovels";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 const SearchPage = () => {
   const [search, setSearch] = useState("");
@@ -16,6 +18,19 @@ const SearchPage = () => {
   const navigate = useNavigate();
 
   const { data: novels = [] } = usePublishedNovels();
+
+  const { data: chapterCounts = {} } = useQuery({
+    queryKey: ["chapter_counts"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("chapters")
+        .select("novel_id")
+        .eq("status", "published");
+      const counts: Record<string, number> = {};
+      (data ?? []).forEach(c => { counts[c.novel_id] = (counts[c.novel_id] || 0) + 1; });
+      return counts;
+    },
+  });
 
   // Genre suggestions
   const genreSuggestions = useMemo(() => {
@@ -128,7 +143,10 @@ const SearchPage = () => {
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
           {filtered.map((novel) => (
             <NovelCard key={novel.id} id={novel.id} title={novel.title} author={novel.author}
-              description={novel.description || ""} chapters={0} rating={0} genre={novel.genre} />
+              description={novel.description || ""}
+              chapters={(chapterCounts as Record<string, number>)[novel.id] || 0}
+              rating={novel.reactions}
+              genre={novel.genre} />
           ))}
         </div>
         {filtered.length === 0 && (

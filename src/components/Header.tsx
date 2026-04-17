@@ -51,11 +51,13 @@ const Header = () => {
 
   const markAllRead = async () => {
     if (!user) return;
-    const unread = notifications.filter((n: any) => !n.is_read);
-    for (const n of unread) {
-      await supabase.from("notifications").update({ is_read: true }).eq("id", (n as any).id);
-    }
+    await supabase
+      .from("notifications")
+      .update({ is_read: true })
+      .eq("user_id", user.id)
+      .eq("is_read", false);
     queryClient.invalidateQueries({ queryKey: ["header_notifications"] });
+    queryClient.invalidateQueries({ queryKey: ["notifications"] });
   };
 
   const handleSignOut = async () => {
