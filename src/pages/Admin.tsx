@@ -266,6 +266,63 @@ const Admin = () => {
     }, true);
   };
 
+  // PDF import state
+  const [pdfImporting, setPdfImporting] = useState(false);
+  const [pdfProgress, setPdfProgress] = useState<string>("");
+
+  const handlePdfImport = async () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "application/pdf,.pdf";
+    input.onchange = async () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      if (file.size > 20 * 1024 * 1024) { toast.error("PDF twò gwo (max 20MB)"); return; }
+      if (!file.name.toLowerCase().endsWith(".pdf")) { toast.error("Sèlman fichye PDF"); return; }
+
+      const replace = chapterForm.content && chapterForm.content.replace(/<[^>]+>/g, "").trim().length > 0
+        ? confirm("Editè a gen deja kontni. Ranplase l ak kontni PDF la?")
+        : true;
+      if (!replace) return;
+
+      setPdfImporting(true);
+      setPdfProgress("Ap li PDF la...");
+
+      try {
+        // Convert file to base64
+        const buf = await file.arrayBuffer();
+        let binary = "";
+        const bytes = new Uint8Array(buf);
+        const chunk = 0x8000;
+        for (let i = 0; i < bytes.length; i += chunk) {
+          binary += String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + chunk)) as any);
+        }
+        const fileBase64 = btoa(binary);
+
+        setPdfProgress("Ap ekstrè tèks ak imaj... (sa ka pran 30-60 segond)");
+
+        const { data, error } = await supabase.functions.invoke("import-pdf-chapter", {
+          body: { fileBase64, fileName: file.name },
+        });
+
+        if (error) throw error;
+        if (!data?.html) throw new Error("Pa gen kontni jenere");
+
+        const stats = data.stats || {};
+        setChapterForm(p => ({ ...p, content: data.html }));
+        toast.success(`PDF enpòte! ${stats.pages || 0} paj, ${stats.images || 0} imaj`);
+      } catch (e: any) {
+        console.error("PDF import error:", e);
+        const msg = e?.context?.error || e?.message || "Erè enpòte PDF la";
+        toast.error(typeof msg === "string" ? msg : "Erè enpòte PDF la");
+      } finally {
+        setPdfImporting(false);
+        setPdfProgress("");
+      }
+    };
+    input.click();
+  };
+
   // Image upload handler - inserts directly into Quill editor
   const handleImageUpload = async () => {
     const input = document.createElement("input");
@@ -475,12 +532,24 @@ const Admin = () => {
 
                   {/* Rich text editor */}
                   <div>
-                    <div className="flex items-center justify-between mb-1.5">
+                    <div className="flex flex-wrap items-center justify-between gap-2 mb-1.5">
                       <label className="text-sm font-medium text-foreground">Kontni *</label>
-                      <button onClick={handleImageUpload} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary/10 text-primary text-sm font-bold hover:bg-primary/20 active:scale-95 transition-all">
-                        <Upload className="h-4 w-4" /> Ajoute Imaj
-                      </button>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button onClick={handlePdfImport} disabled={pdfImporting}
+                          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-secondary text-secondary-foreground text-sm font-bold hover:bg-secondary/80 active:scale-95 transition-all disabled:opacity-50">
+                          {pdfImporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
+                          {pdfImporting ? "Ap enpòte..." : "Enpòte PDF"}
+                        </button>
+                        <button onClick={handleImageUpload} disabled={pdfImporting} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary/10 text-primary text-sm font-bold hover:bg-primary/20 active:scale-95 transition-all disabled:opacity-50">
+                          <Upload className="h-4 w-4" /> Ajoute Imaj
+                        </button>
+                      </div>
                     </div>
+                    {pdfImporting && (
+                      <div className="mb-2 px-3 py-2 rounded-lg bg-primary/5 border border-primary/20 text-xs text-primary flex items-center gap-2">
+                        <Loader2 className="h-3 w-3 animate-spin" /> {pdfProgress}
+                      </div>
+                    )}
                     <div className="border border-input rounded-xl overflow-hidden bg-background">
                       <ReactQuill
                         ref={quillRef}
@@ -492,7 +561,7 @@ const Admin = () => {
                         className="min-h-[300px]"
                       />
                     </div>
-                    <p className="text-[11px] text-muted-foreground mt-1">Tip: Itilize bouton "Ajoute Imaj" pou upload imaj dirèkteman nan editè a.</p>
+                    <p className="text-[11px] text-muted-foreground mt-1">Tip: Itilize "Enpòte PDF" pou konvèti yon woman PDF an chapit otomatikman (tèks + imaj). Oswa "Ajoute Imaj" pou yon sèl imaj.</p>
                   </div>
 
                   <div className="flex flex-wrap items-center gap-3">
