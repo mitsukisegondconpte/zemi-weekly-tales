@@ -532,12 +532,24 @@ const Admin = () => {
 
                   {/* Rich text editor */}
                   <div>
-                    <div className="flex items-center justify-between mb-1.5">
+                    <div className="flex flex-wrap items-center justify-between gap-2 mb-1.5">
                       <label className="text-sm font-medium text-foreground">Kontni *</label>
-                      <button onClick={handleImageUpload} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary/10 text-primary text-sm font-bold hover:bg-primary/20 active:scale-95 transition-all">
-                        <Upload className="h-4 w-4" /> Ajoute Imaj
-                      </button>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button onClick={handlePdfImport} disabled={pdfImporting}
+                          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-secondary text-secondary-foreground text-sm font-bold hover:bg-secondary/80 active:scale-95 transition-all disabled:opacity-50">
+                          {pdfImporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
+                          {pdfImporting ? "Ap enpòte..." : "Enpòte PDF"}
+                        </button>
+                        <button onClick={handleImageUpload} disabled={pdfImporting} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary/10 text-primary text-sm font-bold hover:bg-primary/20 active:scale-95 transition-all disabled:opacity-50">
+                          <Upload className="h-4 w-4" /> Ajoute Imaj
+                        </button>
+                      </div>
                     </div>
+                    {pdfImporting && (
+                      <div className="mb-2 px-3 py-2 rounded-lg bg-primary/5 border border-primary/20 text-xs text-primary flex items-center gap-2">
+                        <Loader2 className="h-3 w-3 animate-spin" /> {pdfProgress}
+                      </div>
+                    )}
                     <div className="border border-input rounded-xl overflow-hidden bg-background">
                       <ReactQuill
                         ref={quillRef}
