@@ -561,7 +561,7 @@ const Admin = () => {
                         className="min-h-[300px]"
                       />
                     </div>
-                    <p className="text-[11px] text-muted-foreground mt-1">Tip: Itilize bouton "Ajoute Imaj" pou upload imaj dirèkteman nan editè a.</p>
+                    <p className="text-[11px] text-muted-foreground mt-1">Tip: Itilize "Enpòte PDF" pou konvèti yon woman PDF an chapit otomatikman (tèks + imaj). Oswa "Ajoute Imaj" pou yon sèl imaj.</p>
                   </div>
 
                   <div className="flex flex-wrap items-center gap-3">
