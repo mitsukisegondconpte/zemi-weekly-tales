@@ -266,6 +266,63 @@ const Admin = () => {
     }, true);
   };
 
+  // PDF import state
+  const [pdfImporting, setPdfImporting] = useState(false);
+  const [pdfProgress, setPdfProgress] = useState<string>("");
+
+  const handlePdfImport = async () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "application/pdf,.pdf";
+    input.onchange = async () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      if (file.size > 20 * 1024 * 1024) { toast.error("PDF twò gwo (max 20MB)"); return; }
+      if (!file.name.toLowerCase().endsWith(".pdf")) { toast.error("Sèlman fichye PDF"); return; }
+
+      const replace = chapterForm.content && chapterForm.content.replace(/<[^>]+>/g, "").trim().length > 0
+        ? confirm("Editè a gen deja kontni. Ranplase l ak kontni PDF la?")
+        : true;
+      if (!replace) return;
+
+      setPdfImporting(true);
+      setPdfProgress("Ap li PDF la...");
+
+      try {
+        // Convert file to base64
+        const buf = await file.arrayBuffer();
+        let binary = "";
+        const bytes = new Uint8Array(buf);
+        const chunk = 0x8000;
+        for (let i = 0; i < bytes.length; i += chunk) {
+          binary += String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + chunk)) as any);
+        }
+        const fileBase64 = btoa(binary);
+
+        setPdfProgress("Ap ekstrè tèks ak imaj... (sa ka pran 30-60 segond)");
+
+        const { data, error } = await supabase.functions.invoke("import-pdf-chapter", {
+          body: { fileBase64, fileName: file.name },
+        });
+
+        if (error) throw error;
+        if (!data?.html) throw new Error("Pa gen kontni jenere");
+
+        const stats = data.stats || {};
+        setChapterForm(p => ({ ...p, content: data.html }));
+        toast.success(`PDF enpòte! ${stats.pages || 0} paj, ${stats.images || 0} imaj`);
+      } catch (e: any) {
+        console.error("PDF import error:", e);
+        const msg = e?.context?.error || e?.message || "Erè enpòte PDF la";
+        toast.error(typeof msg === "string" ? msg : "Erè enpòte PDF la");
+      } finally {
+        setPdfImporting(false);
+        setPdfProgress("");
+      }
+    };
+    input.click();
+  };
+
   // Image upload handler - inserts directly into Quill editor
   const handleImageUpload = async () => {
     const input = document.createElement("input");
