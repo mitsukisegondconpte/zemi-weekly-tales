@@ -113,8 +113,8 @@ const ChapterReader = () => {
 
   // Comments
   const { data: comments = [], refetch: refetchComments } = useQuery({
-    queryKey: ["comments", chapterId, user?.id],
-    enabled: !!chapterId && !!user,
+    queryKey: ["comments", chapterId],
+    enabled: !!chapterId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("comments")
@@ -127,17 +127,33 @@ const ChapterReader = () => {
     },
   });
 
+  // Realtime: live comments (TikTok / WebNovel style)
+  useEffect(() => {
+    if (!chapterId) return;
+    const channel = supabase
+      .channel(`comments-${chapterId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "comments", filter: `chapter_id=eq.${chapterId}` },
+        () => { refetchComments(); }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [chapterId, refetchComments]);
+
   const submitComment = async () => {
     if (!commentText.trim() || !user || !chapterId || !novelId) return;
+    const text = commentText.trim();
     setSubmittingComment(true);
+    // Optimistic UI: clear input immediately for instant feel
+    setCommentText("");
     const { error } = await supabase.from("comments").insert({
-      user_id: user.id, chapter_id: chapterId, novel_id: novelId, content: commentText.trim()
+      user_id: user.id, chapter_id: chapterId, novel_id: novelId, content: text
     });
     setSubmittingComment(false);
-    if (error) { toast.error("Erè"); return; }
-    setCommentText("");
+    if (error) { toast.error("Erè"); setCommentText(text); return; }
     refetchComments();
-    toast.success("Kòmantè ajoute!");
+    toast.success("Kòmantè pibliye!");
   };
 
   // Paginate: use HTML content, split by blocks
