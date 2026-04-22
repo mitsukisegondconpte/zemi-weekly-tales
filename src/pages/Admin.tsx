@@ -109,13 +109,31 @@ const Admin = () => {
   const { data: allComments = [] } = useQuery({
     queryKey: ["admin_comments"],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data: rawComments } = await supabase
         .from("comments")
-        .select("*, profiles:user_id(display_name), novels:novel_id(title), chapters:chapter_id(title, chapter_number)")
+        .select("*")
         .order("is_approved", { ascending: true })
         .order("created_at", { ascending: false })
         .limit(100);
-      return data ?? [];
+      const list = rawComments ?? [];
+      if (list.length === 0) return [];
+      const userIds = Array.from(new Set(list.map((c: any) => c.user_id)));
+      const novelIds = Array.from(new Set(list.map((c: any) => c.novel_id)));
+      const chapterIds = Array.from(new Set(list.map((c: any) => c.chapter_id)));
+      const [{ data: profs }, { data: novs }, { data: chaps }] = await Promise.all([
+        supabase.from("profiles").select("user_id, display_name").in("user_id", userIds),
+        supabase.from("novels").select("id, title").in("id", novelIds),
+        supabase.from("chapters_metadata").select("id, title, chapter_number").in("id", chapterIds),
+      ]);
+      const pMap = new Map((profs ?? []).map((p: any) => [p.user_id, p.display_name]));
+      const nMap = new Map((novs ?? []).map((n: any) => [n.id, n.title]));
+      const cMap = new Map((chaps ?? []).map((c: any) => [c.id, { title: c.title, chapter_number: c.chapter_number }]));
+      return list.map((c: any) => ({
+        ...c,
+        profiles: { display_name: pMap.get(c.user_id) || "Anonim" },
+        novels: { title: nMap.get(c.novel_id) || "—" },
+        chapters: cMap.get(c.chapter_id) || { title: "—", chapter_number: 0 },
+      }));
     },
   });
 

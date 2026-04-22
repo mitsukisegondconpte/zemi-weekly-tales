@@ -116,19 +116,30 @@ const ChapterReader = () => {
     };
   }, [chapter?.is_premium]);
 
-  // Comments
+  // Comments — fetch comments + profiles separately (no FK between them)
   const { data: comments = [], refetch: refetchComments } = useQuery({
     queryKey: ["comments", chapterId],
     enabled: !!chapterId,
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data: rawComments, error } = await supabase
         .from("comments")
-        .select("*, profiles:user_id(display_name)")
+        .select("*")
         .eq("chapter_id", chapterId!)
         .eq("is_approved", true)
         .order("created_at", { ascending: true });
       if (error) throw error;
-      return data ?? [];
+      const list = rawComments ?? [];
+      if (list.length === 0) return [];
+      const userIds = Array.from(new Set(list.map((c: any) => c.user_id)));
+      const { data: profilesData } = await supabase
+        .from("profiles")
+        .select("user_id, display_name")
+        .in("user_id", userIds);
+      const profileMap = new Map((profilesData ?? []).map((p: any) => [p.user_id, p.display_name]));
+      return list.map((c: any) => ({
+        ...c,
+        profiles: { display_name: profileMap.get(c.user_id) || "Anonim" },
+      }));
     },
   });
 
@@ -148,15 +159,20 @@ const ChapterReader = () => {
 
   const submitComment = async () => {
     if (!commentText.trim() || !user || !chapterId || !novelId) return;
+    if (commentText.length > 1000) { toast.error("Kòmantè twò long (max 1000 karaktè)"); return; }
     const text = commentText.trim();
     setSubmittingComment(true);
-    // Optimistic UI: clear input immediately for instant feel
     setCommentText("");
     const { error } = await supabase.from("comments").insert({
-      user_id: user.id, chapter_id: chapterId, novel_id: novelId, content: text
+      user_id: user.id, chapter_id: chapterId, novel_id: novelId, content: text, is_approved: true,
     });
     setSubmittingComment(false);
-    if (error) { toast.error("Erè"); setCommentText(text); return; }
+    if (error) {
+      console.error("Comment insert error:", error);
+      toast.error(error.message || "Erè pou pibliye kòmantè a");
+      setCommentText(text);
+      return;
+    }
     refetchComments();
     toast.success("Kòmantè pibliye!");
   };
