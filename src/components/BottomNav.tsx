@@ -26,9 +26,9 @@ const BottomNav = () => {
   };
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80 md:hidden">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80 md:hidden animate-fade-in">
       <div className="flex items-center justify-around h-16 px-2">
-        {items.map((item) => {
+        {items.map((item, idx) => {
           const isActive = location.pathname === item.to;
           const isTapped = tapped === item.to;
           const dest = item.to === "/profile" && !user ? "/login" : item.to;
@@ -38,19 +38,20 @@ const BottomNav = () => {
               key={item.to}
               to={dest}
               onClick={() => handleTap(item.to)}
-              className="flex flex-col items-center justify-center gap-0.5 flex-1 py-1 relative"
+              style={{ animationDelay: `${idx * 50}ms` }}
+              className="group flex flex-col items-center justify-center gap-0.5 flex-1 py-1 relative animate-fade-in"
             >
               <div
-                className={`p-1.5 rounded-xl transition-all duration-300 ${
+                className={`p-1.5 rounded-xl transition-all duration-300 ease-out ${
                   isActive
                     ? "gradient-brand text-primary-foreground scale-110 shadow-lg shadow-primary/30"
-                    : "text-muted-foreground"
-                } ${isTapped ? "scale-125" : ""}`}
+                    : "text-muted-foreground group-hover:scale-110 group-hover:text-foreground"
+                } ${isTapped ? "animate-pop-in" : ""}`}
               >
-                <item.icon className="h-5 w-5" />
+                <item.icon className={`h-5 w-5 ${isActive ? "animate-float" : ""}`} />
               </div>
               <span
-                className={`text-[10px] font-semibold transition-colors ${
+                className={`text-[10px] font-semibold transition-colors duration-300 ${
                   isActive ? "text-primary" : "text-muted-foreground"
                 }`}
               >

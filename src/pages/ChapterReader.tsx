@@ -261,25 +261,27 @@ const ChapterReader = () => {
   const ts = THEME_STYLES[theme];
 
   return (
-    <div className={`min-h-screen flex flex-col ${ts.bg} transition-colors duration-300`}>
-      {/* Reading progress bar */}
+    <div className={`min-h-screen flex flex-col ${ts.bg} transition-colors duration-500`}>
+      {/* Reading progress bar with shimmer */}
       <div className="fixed top-0 left-0 right-0 z-[60] h-1">
-        <div className="h-full gradient-brand transition-all duration-150" style={{ width: `${scrollProgress}%` }} />
+        <div
+          className="h-full gradient-brand transition-all duration-200 progress-glow"
+          style={{ width: `${scrollProgress}%` }}
+        />
       </div>
 
       {/* Sticky toolbar */}
       <div className={`sticky top-0 z-50 border-b ${theme === 'dark' ? 'border-white/10 bg-[#1a1a2e]/95' : theme === 'sepia' ? 'border-[#c4a882] bg-[#f4ecd8]/95' : 'border-border bg-white/95'} backdrop-blur`}>
         <div className="flex items-center justify-between px-4 py-2.5 max-w-4xl mx-auto">
-          <Link to={`/novel/${novelId}`} className={`flex items-center gap-1.5 text-sm font-medium ${ts.text} opacity-70 hover:opacity-100`}>
-            <ChevronLeft className="h-5 w-5" /> Retounen
+          <Link to={`/novel/${novelId}`} className={`group flex items-center gap-1.5 text-sm font-medium ${ts.text} opacity-70 hover:opacity-100 transition-opacity`}>
+            <ChevronLeft className="h-5 w-5 nudge-left" /> <span className="link-underline">Retounen</span>
           </Link>
-          <span className={`text-xs font-semibold ${ts.text} opacity-60`}>
+          <span key={`${chapter.chapter_number}-${safePage}`} className={`text-xs font-semibold ${ts.text} opacity-60 animate-fade-in`}>
             Ch. {chapter.chapter_number} • Paj {safePage + 1}/{totalPages}
           </span>
           <div className="flex items-center gap-0.5">
-            {/* Settings button - VERY VISIBLE */}
             <button onClick={() => { setShowSettings(!showSettings); setShowComments(false); }}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-bold transition-all active:scale-95 ${
+              className={`btn-tactile ripple flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-bold ${
                 showSettings
                   ? "gradient-brand text-white shadow-md"
                   : `${theme === 'dark' ? 'bg-white/10 text-white' : theme === 'sepia' ? 'bg-[#d4c4a8] text-[#5b4636]' : 'bg-secondary text-secondary-foreground'}`
@@ -287,9 +289,8 @@ const ChapterReader = () => {
               <Type className="h-4 w-4" />
               <span className="hidden sm:inline">Tèks</span>
             </button>
-            {/* Comments button - VERY VISIBLE */}
             <button onClick={() => { setShowComments(!showComments); setShowSettings(false); }}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-bold transition-all active:scale-95 relative ${
+              className={`btn-tactile ripple flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-bold relative ${
                 showComments
                   ? "gradient-brand text-white shadow-md"
                   : `${theme === 'dark' ? 'bg-white/10 text-white' : theme === 'sepia' ? 'bg-[#d4c4a8] text-[#5b4636]' : 'bg-secondary text-secondary-foreground'}`
@@ -297,7 +298,10 @@ const ChapterReader = () => {
               <MessageSquare className="h-4 w-4" />
               <span className="hidden sm:inline">Kòmantè</span>
               {comments.length > 0 && (
-                <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center shadow-md">
+                <span
+                  key={comments.length}
+                  className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center shadow-md animate-pop-in"
+                >
                   {comments.length}
                 </span>
               )}
@@ -305,9 +309,9 @@ const ChapterReader = () => {
           </div>
         </div>
 
-        {/* Settings panel */}
+        {/* Settings panel with slide+fade */}
         {showSettings && (
-          <div className={`border-t ${theme === 'dark' ? 'border-white/10' : theme === 'sepia' ? 'border-[#c4a882]' : 'border-border'} px-4 py-4`}>
+          <div className={`border-t ${theme === 'dark' ? 'border-white/10' : theme === 'sepia' ? 'border-[#c4a882]' : 'border-border'} px-4 py-4 animate-slide-up-bounce`}>
             <div className="max-w-4xl mx-auto space-y-4">
               {/* Theme selector */}
               <div>
@@ -315,7 +319,7 @@ const ChapterReader = () => {
                 <div className="flex gap-2">
                   {(Object.keys(THEME_STYLES) as ReadingTheme[]).map(t => (
                     <button key={t} onClick={() => setTheme(t)}
-                      className={`flex-1 px-4 py-3 rounded-xl text-sm font-bold transition-all active:scale-95 ${
+                      className={`btn-tactile ripple flex-1 px-4 py-3 rounded-xl text-sm font-bold ${
                         theme === t
                           ? "gradient-brand text-white shadow-lg ring-2 ring-primary/30"
                           : `${THEME_STYLES[t].bg} ${THEME_STYLES[t].text} border-2 border-current/10`
@@ -331,14 +335,14 @@ const ChapterReader = () => {
                 <span className={`text-xs font-bold uppercase tracking-wider ${ts.text} opacity-50 block mb-2`}>Tay Tèks</span>
                 <div className="flex items-center gap-3">
                   <button onClick={() => setFontSize(f => Math.max(14, f - 2))}
-                    className={`h-10 w-10 rounded-xl flex items-center justify-center font-bold text-lg active:scale-95 ${theme === 'dark' ? 'bg-white/10 text-white' : 'bg-secondary text-secondary-foreground'}`}>
+                    className={`btn-tactile ripple h-10 w-10 rounded-xl flex items-center justify-center font-bold text-lg ${theme === 'dark' ? 'bg-white/10 text-white' : 'bg-secondary text-secondary-foreground'}`}>
                     A-
                   </button>
                   <div className="flex-1 flex items-center justify-center">
-                    <span className={`text-lg font-black ${ts.text}`}>{fontSize}px</span>
+                    <span key={fontSize} className={`text-lg font-black ${ts.text} animate-pop-in`}>{fontSize}px</span>
                   </div>
                   <button onClick={() => setFontSize(f => Math.min(28, f + 2))}
-                    className={`h-10 w-10 rounded-xl flex items-center justify-center font-bold text-lg active:scale-95 ${theme === 'dark' ? 'bg-white/10 text-white' : 'bg-secondary text-secondary-foreground'}`}>
+                    className={`btn-tactile ripple h-10 w-10 rounded-xl flex items-center justify-center font-bold text-lg ${theme === 'dark' ? 'bg-white/10 text-white' : 'bg-secondary text-secondary-foreground'}`}>
                     A+
                   </button>
                 </div>
@@ -350,7 +354,7 @@ const ChapterReader = () => {
                 <div className="flex gap-2">
                   {[{ w: 600, l: "Etwat" }, { w: 720, l: "Mwayen" }, { w: 900, l: "Laj" }].map(({ w, l }) => (
                     <button key={w} onClick={() => setMaxWidth(w)}
-                      className={`flex-1 px-3 py-2.5 rounded-xl text-sm font-bold transition-all active:scale-95 ${
+                      className={`btn-tactile ripple flex-1 px-3 py-2.5 rounded-xl text-sm font-bold ${
                         maxWidth === w ? "gradient-brand text-white shadow-lg" : `${ts.text} opacity-60 border-2 ${theme === 'dark' ? 'border-white/10' : 'border-border'}`
                       }`}>
                       {l}
@@ -364,10 +368,15 @@ const ChapterReader = () => {
       </div>
 
       <main className="flex-1">
-        <div className="mx-auto px-4 py-8" style={{ maxWidth: `${maxWidth}px` }} ref={contentRef}>
+        <div key={chapterId} className="mx-auto px-4 py-8 animate-fade-in" style={{ maxWidth: `${maxWidth}px` }} ref={contentRef}>
           <div className="mb-8">
-            <span className={`text-xs font-semibold uppercase tracking-widest ${theme === 'dark' ? 'text-orange-400' : 'text-primary'}`}>Chapit {chapter.chapter_number}</span>
-            <h1 className={`text-2xl md:text-3xl font-black font-serif ${ts.text} mt-1`}>{chapter.title}</h1>
+            <span className={`text-xs font-semibold uppercase tracking-widest ${theme === 'dark' ? 'text-orange-400' : 'text-primary'} animate-fade-in-left`}>Chapit {chapter.chapter_number}</span>
+            <h1
+              key={`title-${chapter.id}`}
+              className={`typewriter-title text-2xl md:text-3xl font-black font-serif ${ts.text} mt-1`}
+            >
+              {chapter.title}
+            </h1>
           </div>
 
           {/* Watermark for premium */}
@@ -378,13 +387,23 @@ const ChapterReader = () => {
               </div>
             )}
 
-            {/* Render current page - HTML content support */}
-            <div className={`${ts.text} chapter-content`}>
+            {/* Render current page with staggered fade-in from left */}
+            <div
+              key={`page-${chapter.id}-${safePage}`}
+              className={`${ts.text} chapter-content stagger-children`}
+              style={{ ["--stagger" as any]: "55ms" }}
+            >
               {pages[safePage]?.map((block, i) => {
                 if (block.includes("<")) {
-                  return <div key={i} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(block) }} />;
+                  return (
+                    <div
+                      key={i}
+                      style={{ ["--i" as any]: i }}
+                      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(block) }}
+                    />
+                  );
                 }
-                return <p key={i} className="mb-6">{block}</p>;
+                return <p key={i} style={{ ["--i" as any]: i }} className="mb-6">{block}</p>;
               })}
             </div>
           </article>
@@ -392,22 +411,24 @@ const ChapterReader = () => {
           {/* Page navigation */}
           {totalPages > 1 && (
             <div className="mt-10 space-y-4">
-              <Progress value={((safePage + 1) / totalPages) * 100} className="h-2" />
+              <div className="progress-glow rounded-full">
+                <Progress value={((safePage + 1) / totalPages) * 100} className="h-2" />
+              </div>
               <div className="flex items-center justify-between">
                 <button
                   onClick={() => { setCurrentPage(p => Math.max(0, p - 1)); window.scrollTo(0, 0); }}
                   disabled={safePage === 0}
-                  className={`px-5 py-3 rounded-xl text-sm font-bold transition-all active:scale-95 ${
-                    safePage === 0 ? "opacity-30 cursor-not-allowed" : "hover:opacity-80"
+                  className={`btn-tactile ripple group px-5 py-3 rounded-xl text-sm font-bold ${
+                    safePage === 0 ? "opacity-30 cursor-not-allowed" : "hover:opacity-90"
                   } ${theme === 'dark' ? 'bg-white/10 text-white' : theme === 'sepia' ? 'bg-[#d4c4a8] text-[#5b4636]' : 'bg-secondary text-secondary-foreground'}`}>
-                  <ChevronLeft className="h-4 w-4 inline mr-1" /> Paj anvan
+                  <ChevronLeft className="h-4 w-4 inline mr-1 nudge-left" /> Paj anvan
                 </button>
 
                 <div className="flex gap-1.5 flex-wrap justify-center">
                   {Array.from({ length: totalPages }, (_, i) => (
                     <button key={i} onClick={() => { setCurrentPage(i); window.scrollTo(0, 0); }}
-                      className={`w-9 h-9 rounded-xl text-xs font-bold transition-all active:scale-95 ${
-                        i === safePage ? "gradient-brand text-white shadow-md" : `${ts.text} opacity-40 hover:opacity-70`
+                      className={`btn-tactile w-9 h-9 rounded-xl text-xs font-bold ${
+                        i === safePage ? "gradient-brand text-white shadow-md animate-pop-in" : `${ts.text} opacity-40 hover:opacity-80`
                       }`}>
                       {i + 1}
                     </button>
@@ -417,10 +438,10 @@ const ChapterReader = () => {
                 <button
                   onClick={() => { setCurrentPage(p => Math.min(totalPages - 1, p + 1)); window.scrollTo(0, 0); }}
                   disabled={safePage >= totalPages - 1}
-                  className={`px-5 py-3 rounded-xl text-sm font-bold transition-all active:scale-95 ${
-                    safePage >= totalPages - 1 ? "opacity-30 cursor-not-allowed" : "hover:opacity-80"
+                  className={`btn-tactile ripple group px-5 py-3 rounded-xl text-sm font-bold ${
+                    safePage >= totalPages - 1 ? "opacity-30 cursor-not-allowed" : "hover:opacity-90"
                   } ${theme === 'dark' ? 'bg-white/10 text-white' : theme === 'sepia' ? 'bg-[#d4c4a8] text-[#5b4636]' : 'bg-secondary text-secondary-foreground'}`}>
-                  Paj swivan <ChevronRight className="h-4 w-4 inline ml-1" />
+                  Paj swivan <ChevronRight className="h-4 w-4 inline ml-1 nudge-right" />
                 </button>
               </div>
             </div>
@@ -430,27 +451,29 @@ const ChapterReader = () => {
           <div className={`flex items-center justify-between mt-8 pt-6 border-t ${theme === 'dark' ? 'border-white/10' : theme === 'sepia' ? 'border-[#c4a882]' : 'border-border'}`}>
             {prevChapter ? (
               <button onClick={() => handleNavigateChapter(prevChapter)}
-                className={`inline-flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-bold active:scale-95 ${theme === 'dark' ? 'bg-white/10 text-white' : theme === 'sepia' ? 'bg-[#d4c4a8] text-[#5b4636]' : 'bg-secondary text-secondary-foreground'}`}>
-                <ChevronLeft className="h-5 w-5" /> Chapit anvan
+                className={`btn-tactile ripple group inline-flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-bold ${theme === 'dark' ? 'bg-white/10 text-white' : theme === 'sepia' ? 'bg-[#d4c4a8] text-[#5b4636]' : 'bg-secondary text-secondary-foreground'}`}>
+                <ChevronLeft className="h-5 w-5 nudge-left" /> Chapit anvan
               </button>
             ) : <div />}
             <span className={`text-sm font-semibold ${ts.text} opacity-50`}>{chapter.chapter_number} / {allChapters.length}</span>
             {nextChapter ? (
               <button onClick={() => handleNavigateChapter(nextChapter)}
-                className="inline-flex items-center gap-2 px-5 py-3 rounded-xl gradient-brand text-white text-sm font-bold hover:opacity-90 shadow-lg active:scale-95">
-                Chapit swivan <ChevronRight className="h-5 w-5" />
+                className="btn-tactile ripple group inline-flex items-center gap-2 px-5 py-3 rounded-xl gradient-brand text-white text-sm font-bold shadow-lg">
+                Chapit swivan <ChevronRight className="h-5 w-5 nudge-right" />
                 {nextChapter.is_premium && nextChapter.coin_price > 0 && !unlockedIds.includes(nextChapter.id) && <Lock className="h-4 w-4" />}
               </button>
             ) : <div />}
           </div>
 
-          {/* Comments section - ALWAYS VISIBLE at bottom */}
+          {/* Comments section */}
           <div className={`mt-10 pt-6 border-t ${theme === 'dark' ? 'border-white/10' : theme === 'sepia' ? 'border-[#c4a882]' : 'border-border'}`}>
             <h3 className={`text-xl font-black font-serif ${ts.text} mb-6 flex items-center gap-3`}>
-              <div className="h-10 w-10 rounded-xl gradient-brand flex items-center justify-center">
+              <div className="h-10 w-10 rounded-xl gradient-brand flex items-center justify-center animate-float">
                 <MessageSquare className="h-5 w-5 text-white" />
               </div>
-              Kòmantè ({comments.length})
+              Kòmantè (
+              <span key={comments.length} className="inline-block animate-pop-in">{comments.length}</span>
+              )
             </h3>
 
             {/* Comment input */}
@@ -461,40 +484,44 @@ const ChapterReader = () => {
                 onChange={e => setCommentText(e.target.value)}
                 onKeyDown={e => e.key === "Enter" && submitComment()}
                 placeholder="Ekri yon kòmantè..."
-                className={`flex-1 rounded-xl border-2 px-4 py-3.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary transition-all ${
+                className={`flex-1 rounded-xl border-2 px-4 py-3.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-300 focus:scale-[1.01] ${
                   theme === 'dark' ? 'border-white/20 bg-white/5 text-white placeholder:text-white/40' :
                   theme === 'sepia' ? 'border-[#c4a882] bg-[#ede0c8] text-[#5b4636]' :
                   'border-border bg-background text-foreground'
                 }`}
               />
               <button onClick={submitComment} disabled={submittingComment || !commentText.trim()}
-                className="px-5 py-3.5 rounded-xl gradient-brand text-white font-bold hover:opacity-90 disabled:opacity-50 shadow-lg active:scale-95 flex items-center gap-2">
-                <Send className="h-5 w-5" />
+                className="btn-tactile ripple group px-5 py-3.5 rounded-xl gradient-brand text-white font-bold disabled:opacity-50 shadow-lg flex items-center gap-2">
+                <Send className={`h-5 w-5 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 ${submittingComment ? "animate-spin-slow" : ""}`} />
                 <span className="hidden sm:inline">Voye</span>
               </button>
             </div>
 
             {/* Comment list */}
             <div className="space-y-3">
-              {comments.map((c: any) => (
-                <div key={c.id} className={`p-4 rounded-xl ${
-                  theme === 'dark' ? 'bg-white/5 border border-white/10' :
-                  theme === 'sepia' ? 'bg-[#ede0c8] border border-[#c4a882]' :
-                  'bg-card border border-border'
-                }`}>
+              {comments.map((c: any, idx: number) => (
+                <div
+                  key={c.id}
+                  style={{ animationDelay: `${Math.min(idx, 8) * 60}ms` }}
+                  className={`p-4 rounded-xl animate-slide-up-bounce transition-shadow hover:shadow-md ${
+                    theme === 'dark' ? 'bg-white/5 border border-white/10' :
+                    theme === 'sepia' ? 'bg-[#ede0c8] border border-[#c4a882]' :
+                    'bg-card border border-border'
+                  }`}
+                >
                   <div className="flex items-center gap-2.5 mb-2">
-                    <div className="h-8 w-8 rounded-full gradient-brand flex items-center justify-center text-white text-xs font-bold shadow-sm">
+                    <div className="avatar-wobble h-8 w-8 rounded-full gradient-brand flex items-center justify-center text-white text-xs font-bold shadow-sm">
                       {((c as any).profiles?.display_name || "U")[0].toUpperCase()}
                     </div>
                     <span className={`text-sm font-bold ${ts.text}`}>{(c as any).profiles?.display_name || "Anonim"}</span>
                     <span className={`text-xs ${ts.text} opacity-40`}>{new Date(c.created_at).toLocaleDateString()}</span>
                   </div>
-                  <p className={`text-sm ${ts.text} opacity-80 pl-10`}>{c.content}</p>
+                  <p className={`text-sm ${ts.text} opacity-80 pl-10 animate-fade-in`}>{c.content}</p>
                 </div>
               ))}
               {comments.length === 0 && (
-                <div className={`text-center py-10 ${ts.text} opacity-40`}>
-                  <MessageSquare className="h-10 w-10 mx-auto mb-3 opacity-30" />
+                <div className={`text-center py-10 ${ts.text} opacity-50 animate-fade-in`}>
+                  <MessageSquare className="h-10 w-10 mx-auto mb-3 opacity-40 animate-float" />
                   <p className="text-sm font-medium">Pa gen kòmantè ankò.</p>
                   <p className="text-xs mt-1">Ou ka premye a! 🎉</p>
                 </div>
