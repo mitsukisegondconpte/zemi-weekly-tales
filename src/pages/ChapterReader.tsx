@@ -465,13 +465,15 @@ const ChapterReader = () => {
             ) : <div />}
           </div>
 
-          {/* Comments section - ALWAYS VISIBLE at bottom */}
+          {/* Comments section */}
           <div className={`mt-10 pt-6 border-t ${theme === 'dark' ? 'border-white/10' : theme === 'sepia' ? 'border-[#c4a882]' : 'border-border'}`}>
             <h3 className={`text-xl font-black font-serif ${ts.text} mb-6 flex items-center gap-3`}>
-              <div className="h-10 w-10 rounded-xl gradient-brand flex items-center justify-center">
+              <div className="h-10 w-10 rounded-xl gradient-brand flex items-center justify-center animate-float">
                 <MessageSquare className="h-5 w-5 text-white" />
               </div>
-              Kòmantè ({comments.length})
+              Kòmantè (
+              <span key={comments.length} className="inline-block animate-pop-in">{comments.length}</span>
+              )
             </h3>
 
             {/* Comment input */}
@@ -482,18 +484,50 @@ const ChapterReader = () => {
                 onChange={e => setCommentText(e.target.value)}
                 onKeyDown={e => e.key === "Enter" && submitComment()}
                 placeholder="Ekri yon kòmantè..."
-                className={`flex-1 rounded-xl border-2 px-4 py-3.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary transition-all ${
+                className={`flex-1 rounded-xl border-2 px-4 py-3.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-300 focus:scale-[1.01] ${
                   theme === 'dark' ? 'border-white/20 bg-white/5 text-white placeholder:text-white/40' :
                   theme === 'sepia' ? 'border-[#c4a882] bg-[#ede0c8] text-[#5b4636]' :
                   'border-border bg-background text-foreground'
                 }`}
               />
               <button onClick={submitComment} disabled={submittingComment || !commentText.trim()}
-                className="px-5 py-3.5 rounded-xl gradient-brand text-white font-bold hover:opacity-90 disabled:opacity-50 shadow-lg active:scale-95 flex items-center gap-2">
-                <Send className="h-5 w-5" />
+                className="btn-tactile ripple group px-5 py-3.5 rounded-xl gradient-brand text-white font-bold disabled:opacity-50 shadow-lg flex items-center gap-2">
+                <Send className={`h-5 w-5 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 ${submittingComment ? "animate-spin-slow" : ""}`} />
                 <span className="hidden sm:inline">Voye</span>
               </button>
             </div>
+
+            {/* Comment list */}
+            <div className="space-y-3">
+              {comments.map((c: any, idx: number) => (
+                <div
+                  key={c.id}
+                  style={{ animationDelay: `${Math.min(idx, 8) * 60}ms` }}
+                  className={`p-4 rounded-xl animate-slide-up-bounce transition-shadow hover:shadow-md ${
+                    theme === 'dark' ? 'bg-white/5 border border-white/10' :
+                    theme === 'sepia' ? 'bg-[#ede0c8] border border-[#c4a882]' :
+                    'bg-card border border-border'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5 mb-2">
+                    <div className="avatar-wobble h-8 w-8 rounded-full gradient-brand flex items-center justify-center text-white text-xs font-bold shadow-sm">
+                      {((c as any).profiles?.display_name || "U")[0].toUpperCase()}
+                    </div>
+                    <span className={`text-sm font-bold ${ts.text}`}>{(c as any).profiles?.display_name || "Anonim"}</span>
+                    <span className={`text-xs ${ts.text} opacity-40`}>{new Date(c.created_at).toLocaleDateString()}</span>
+                  </div>
+                  <p className={`text-sm ${ts.text} opacity-80 pl-10 animate-fade-in`}>{c.content}</p>
+                </div>
+              ))}
+              {comments.length === 0 && (
+                <div className={`text-center py-10 ${ts.text} opacity-50 animate-fade-in`}>
+                  <MessageSquare className="h-10 w-10 mx-auto mb-3 opacity-40 animate-float" />
+                  <p className="text-sm font-medium">Pa gen kòmantè ankò.</p>
+                  <p className="text-xs mt-1">Ou ka premye a! 🎉</p>
+                </div>
+              )}
+            </div>
+          </div>
 
             {/* Comment list */}
             <div className="space-y-3">
