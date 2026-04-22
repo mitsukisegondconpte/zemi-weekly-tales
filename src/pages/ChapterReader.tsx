@@ -528,6 +528,7 @@ const ChapterReader = () => {
               )}
             </div>
           </div>
+        </div>
 
             {/* Comment list */}
             <div className="space-y-3">
