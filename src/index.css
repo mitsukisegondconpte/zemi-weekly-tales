@@ -97,6 +97,13 @@
     @apply border-border;
   }
 
+  html, body {
+    overflow-wrap: break-word;
+    word-break: normal;
+    -webkit-hyphens: auto;
+    hyphens: auto;
+  }
+
   body {
     @apply bg-background text-foreground font-sans;
     font-family: 'Inter', sans-serif;
@@ -104,6 +111,17 @@
 
   h1, h2, h3 {
     font-family: 'Playfair Display', serif;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    hyphens: auto;
+  }
+
+  p, li, span, a, label, button, td, div {
+    overflow-wrap: anywhere;
+  }
+
+  input, textarea {
+    overflow-wrap: break-word;
   }
 }
 
@@ -222,15 +240,22 @@
   .avatar-wobble { transition: transform 0.3s ease; }
   .avatar-wobble:hover { animation: wobble 0.55s ease-in-out; }
 
-  /* Typewriter title */
+  /* Typewriter title — only effective on wider screens to avoid breaking long Haitian titles */
   .typewriter-title {
     display: inline-block;
-    overflow: hidden;
-    white-space: nowrap;
-    border-right: 2px solid hsl(var(--primary));
-    animation: typewriter 1.4s steps(40, end) forwards,
-               blink-caret 0.85s step-end 6;
+    overflow-wrap: anywhere;
+    word-break: break-word;
     max-width: 100%;
+    animation: title-rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  @media (min-width: 768px) {
+    .typewriter-title {
+      overflow: hidden;
+      white-space: nowrap;
+      border-right: 2px solid hsl(var(--primary));
+      animation: typewriter 1.4s steps(40, end) forwards,
+                 blink-caret 0.85s step-end 6;
+    }
   }
 
   /* Stagger fade-in for children */
@@ -239,6 +264,38 @@
     animation: fade-in-left 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
     animation-delay: calc(var(--stagger, 70ms) * var(--i, 0));
   }
+
+  /* Form field entrance — used on Login/Register */
+  .field-rise {
+    opacity: 0;
+    animation: rise-fade 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    animation-delay: calc(var(--d, 0ms));
+  }
+
+  /* Soft floating breath for hero icons */
+  .breathe { animation: breathe 4s ease-in-out infinite; }
+
+  /* Shake for error states */
+  .shake { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
+}
+
+@keyframes title-rise {
+  0% { opacity: 0; transform: translateY(10px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+@keyframes rise-fade {
+  0% { opacity: 0; transform: translateY(12px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+@keyframes breathe {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-5px) scale(1.04); }
+}
+@keyframes shake {
+  10%, 90% { transform: translateX(-1px); }
+  20%, 80% { transform: translateX(2px); }
+  30%, 50%, 70% { transform: translateX(-4px); }
+  40%, 60% { transform: translateX(4px); }
 }
 
 @keyframes ripple {
@@ -285,6 +342,12 @@
 }
 
 /* Chapter content styles */
+.chapter-content {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  hyphens: auto;
+}
+
 .chapter-content img {
   max-width: 100%;
   height: auto;
@@ -292,6 +355,13 @@
   box-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.15);
   margin: 1.5rem auto;
   display: block;
+}
+
+.chapter-content p,
+.chapter-content li,
+.chapter-content blockquote {
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .chapter-content p {
