@@ -529,35 +529,6 @@ const ChapterReader = () => {
             </div>
           </div>
         </div>
-
-            {/* Comment list */}
-            <div className="space-y-3">
-              {comments.map((c: any) => (
-                <div key={c.id} className={`p-4 rounded-xl ${
-                  theme === 'dark' ? 'bg-white/5 border border-white/10' :
-                  theme === 'sepia' ? 'bg-[#ede0c8] border border-[#c4a882]' :
-                  'bg-card border border-border'
-                }`}>
-                  <div className="flex items-center gap-2.5 mb-2">
-                    <div className="h-8 w-8 rounded-full gradient-brand flex items-center justify-center text-white text-xs font-bold shadow-sm">
-                      {((c as any).profiles?.display_name || "U")[0].toUpperCase()}
-                    </div>
-                    <span className={`text-sm font-bold ${ts.text}`}>{(c as any).profiles?.display_name || "Anonim"}</span>
-                    <span className={`text-xs ${ts.text} opacity-40`}>{new Date(c.created_at).toLocaleDateString()}</span>
-                  </div>
-                  <p className={`text-sm ${ts.text} opacity-80 pl-10`}>{c.content}</p>
-                </div>
-              ))}
-              {comments.length === 0 && (
-                <div className={`text-center py-10 ${ts.text} opacity-40`}>
-                  <MessageSquare className="h-10 w-10 mx-auto mb-3 opacity-30" />
-                  <p className="text-sm font-medium">Pa gen kòmantè ankò.</p>
-                  <p className="text-xs mt-1">Ou ka premye a! 🎉</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
       </main>
 
       <Footer />
