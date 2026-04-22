@@ -44,10 +44,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const { data } = await supabase
       .from("user_roles")
       .select("role")
-      .eq("user_id", userId)
-      .eq("role", "admin")
-      .maybeSingle();
-    setIsAdmin(!!data);
+      .eq("user_id", userId);
+    setIsAdmin((data ?? []).some((r) => r.role === "admin"));
   };
 
   useEffect(() => {
@@ -55,10 +53,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        setTimeout(() => {
-          fetchProfile(session.user.id);
-          fetchRole(session.user.id);
-        }, 0);
+        // Defer to next tick to avoid deadlock with auth callback, but use queueMicrotask
+        // for predictable ordering instead of setTimeout(..., 0).
+        queueMicrotask(() => {
+          Promise.all([
+            fetchProfile(session.user.id),
+            fetchRole(session.user.id),
+          ]).catch((err) => console.error("Auth fetch error:", err));
+        });
       } else {
         setProfile(null);
         setIsAdmin(false);

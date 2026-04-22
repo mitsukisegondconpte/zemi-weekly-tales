@@ -1,0 +1,26 @@
+{
+  "name": "ZEMI Chak Semèn",
+  "short_name": "ZEMI",
+  "description": "Novèl orijinal chak semèn an Kreyòl. Li chapit gratis oswa debloke istwa premium ak coins.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f0f1a",
+  "theme_color": "#f97316",
+  "lang": "ht",
+  "icons": [
+    {
+      "src": "/favicon.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg",
+      "purpose": "any"
+    },
+    {
+      "src": "/favicon.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any"
+    }
+  ]
+}
