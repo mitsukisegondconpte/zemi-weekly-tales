@@ -309,9 +309,9 @@ const ChapterReader = () => {
           </div>
         </div>
 
-        {/* Settings panel */}
+        {/* Settings panel with slide+fade */}
         {showSettings && (
-          <div className={`border-t ${theme === 'dark' ? 'border-white/10' : theme === 'sepia' ? 'border-[#c4a882]' : 'border-border'} px-4 py-4`}>
+          <div className={`border-t ${theme === 'dark' ? 'border-white/10' : theme === 'sepia' ? 'border-[#c4a882]' : 'border-border'} px-4 py-4 animate-slide-up-bounce`}>
             <div className="max-w-4xl mx-auto space-y-4">
               {/* Theme selector */}
               <div>
@@ -319,7 +319,7 @@ const ChapterReader = () => {
                 <div className="flex gap-2">
                   {(Object.keys(THEME_STYLES) as ReadingTheme[]).map(t => (
                     <button key={t} onClick={() => setTheme(t)}
-                      className={`flex-1 px-4 py-3 rounded-xl text-sm font-bold transition-all active:scale-95 ${
+                      className={`btn-tactile ripple flex-1 px-4 py-3 rounded-xl text-sm font-bold ${
                         theme === t
                           ? "gradient-brand text-white shadow-lg ring-2 ring-primary/30"
                           : `${THEME_STYLES[t].bg} ${THEME_STYLES[t].text} border-2 border-current/10`
@@ -335,14 +335,14 @@ const ChapterReader = () => {
                 <span className={`text-xs font-bold uppercase tracking-wider ${ts.text} opacity-50 block mb-2`}>Tay Tèks</span>
                 <div className="flex items-center gap-3">
                   <button onClick={() => setFontSize(f => Math.max(14, f - 2))}
-                    className={`h-10 w-10 rounded-xl flex items-center justify-center font-bold text-lg active:scale-95 ${theme === 'dark' ? 'bg-white/10 text-white' : 'bg-secondary text-secondary-foreground'}`}>
+                    className={`btn-tactile ripple h-10 w-10 rounded-xl flex items-center justify-center font-bold text-lg ${theme === 'dark' ? 'bg-white/10 text-white' : 'bg-secondary text-secondary-foreground'}`}>
                     A-
                   </button>
                   <div className="flex-1 flex items-center justify-center">
-                    <span className={`text-lg font-black ${ts.text}`}>{fontSize}px</span>
+                    <span key={fontSize} className={`text-lg font-black ${ts.text} animate-pop-in`}>{fontSize}px</span>
                   </div>
                   <button onClick={() => setFontSize(f => Math.min(28, f + 2))}
-                    className={`h-10 w-10 rounded-xl flex items-center justify-center font-bold text-lg active:scale-95 ${theme === 'dark' ? 'bg-white/10 text-white' : 'bg-secondary text-secondary-foreground'}`}>
+                    className={`btn-tactile ripple h-10 w-10 rounded-xl flex items-center justify-center font-bold text-lg ${theme === 'dark' ? 'bg-white/10 text-white' : 'bg-secondary text-secondary-foreground'}`}>
                     A+
                   </button>
                 </div>
@@ -354,7 +354,7 @@ const ChapterReader = () => {
                 <div className="flex gap-2">
                   {[{ w: 600, l: "Etwat" }, { w: 720, l: "Mwayen" }, { w: 900, l: "Laj" }].map(({ w, l }) => (
                     <button key={w} onClick={() => setMaxWidth(w)}
-                      className={`flex-1 px-3 py-2.5 rounded-xl text-sm font-bold transition-all active:scale-95 ${
+                      className={`btn-tactile ripple flex-1 px-3 py-2.5 rounded-xl text-sm font-bold ${
                         maxWidth === w ? "gradient-brand text-white shadow-lg" : `${ts.text} opacity-60 border-2 ${theme === 'dark' ? 'border-white/10' : 'border-border'}`
                       }`}>
                       {l}
