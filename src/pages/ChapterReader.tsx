@@ -411,22 +411,24 @@ const ChapterReader = () => {
           {/* Page navigation */}
           {totalPages > 1 && (
             <div className="mt-10 space-y-4">
-              <Progress value={((safePage + 1) / totalPages) * 100} className="h-2" />
+              <div className="progress-glow rounded-full">
+                <Progress value={((safePage + 1) / totalPages) * 100} className="h-2" />
+              </div>
               <div className="flex items-center justify-between">
                 <button
                   onClick={() => { setCurrentPage(p => Math.max(0, p - 1)); window.scrollTo(0, 0); }}
                   disabled={safePage === 0}
-                  className={`px-5 py-3 rounded-xl text-sm font-bold transition-all active:scale-95 ${
-                    safePage === 0 ? "opacity-30 cursor-not-allowed" : "hover:opacity-80"
+                  className={`btn-tactile ripple group px-5 py-3 rounded-xl text-sm font-bold ${
+                    safePage === 0 ? "opacity-30 cursor-not-allowed" : "hover:opacity-90"
                   } ${theme === 'dark' ? 'bg-white/10 text-white' : theme === 'sepia' ? 'bg-[#d4c4a8] text-[#5b4636]' : 'bg-secondary text-secondary-foreground'}`}>
-                  <ChevronLeft className="h-4 w-4 inline mr-1" /> Paj anvan
+                  <ChevronLeft className="h-4 w-4 inline mr-1 nudge-left" /> Paj anvan
                 </button>
 
                 <div className="flex gap-1.5 flex-wrap justify-center">
                   {Array.from({ length: totalPages }, (_, i) => (
                     <button key={i} onClick={() => { setCurrentPage(i); window.scrollTo(0, 0); }}
-                      className={`w-9 h-9 rounded-xl text-xs font-bold transition-all active:scale-95 ${
-                        i === safePage ? "gradient-brand text-white shadow-md" : `${ts.text} opacity-40 hover:opacity-70`
+                      className={`btn-tactile w-9 h-9 rounded-xl text-xs font-bold ${
+                        i === safePage ? "gradient-brand text-white shadow-md animate-pop-in" : `${ts.text} opacity-40 hover:opacity-80`
                       }`}>
                       {i + 1}
                     </button>
@@ -436,10 +438,10 @@ const ChapterReader = () => {
                 <button
                   onClick={() => { setCurrentPage(p => Math.min(totalPages - 1, p + 1)); window.scrollTo(0, 0); }}
                   disabled={safePage >= totalPages - 1}
-                  className={`px-5 py-3 rounded-xl text-sm font-bold transition-all active:scale-95 ${
-                    safePage >= totalPages - 1 ? "opacity-30 cursor-not-allowed" : "hover:opacity-80"
+                  className={`btn-tactile ripple group px-5 py-3 rounded-xl text-sm font-bold ${
+                    safePage >= totalPages - 1 ? "opacity-30 cursor-not-allowed" : "hover:opacity-90"
                   } ${theme === 'dark' ? 'bg-white/10 text-white' : theme === 'sepia' ? 'bg-[#d4c4a8] text-[#5b4636]' : 'bg-secondary text-secondary-foreground'}`}>
-                  Paj swivan <ChevronRight className="h-4 w-4 inline ml-1" />
+                  Paj swivan <ChevronRight className="h-4 w-4 inline ml-1 nudge-right" />
                 </button>
               </div>
             </div>
@@ -449,15 +451,15 @@ const ChapterReader = () => {
           <div className={`flex items-center justify-between mt-8 pt-6 border-t ${theme === 'dark' ? 'border-white/10' : theme === 'sepia' ? 'border-[#c4a882]' : 'border-border'}`}>
             {prevChapter ? (
               <button onClick={() => handleNavigateChapter(prevChapter)}
-                className={`inline-flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-bold active:scale-95 ${theme === 'dark' ? 'bg-white/10 text-white' : theme === 'sepia' ? 'bg-[#d4c4a8] text-[#5b4636]' : 'bg-secondary text-secondary-foreground'}`}>
-                <ChevronLeft className="h-5 w-5" /> Chapit anvan
+                className={`btn-tactile ripple group inline-flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-bold ${theme === 'dark' ? 'bg-white/10 text-white' : theme === 'sepia' ? 'bg-[#d4c4a8] text-[#5b4636]' : 'bg-secondary text-secondary-foreground'}`}>
+                <ChevronLeft className="h-5 w-5 nudge-left" /> Chapit anvan
               </button>
             ) : <div />}
             <span className={`text-sm font-semibold ${ts.text} opacity-50`}>{chapter.chapter_number} / {allChapters.length}</span>
             {nextChapter ? (
               <button onClick={() => handleNavigateChapter(nextChapter)}
-                className="inline-flex items-center gap-2 px-5 py-3 rounded-xl gradient-brand text-white text-sm font-bold hover:opacity-90 shadow-lg active:scale-95">
-                Chapit swivan <ChevronRight className="h-5 w-5" />
+                className="btn-tactile ripple group inline-flex items-center gap-2 px-5 py-3 rounded-xl gradient-brand text-white text-sm font-bold shadow-lg">
+                Chapit swivan <ChevronRight className="h-5 w-5 nudge-right" />
                 {nextChapter.is_premium && nextChapter.coin_price > 0 && !unlockedIds.includes(nextChapter.id) && <Lock className="h-4 w-4" />}
               </button>
             ) : <div />}
