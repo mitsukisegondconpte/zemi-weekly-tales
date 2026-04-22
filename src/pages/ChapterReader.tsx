@@ -532,7 +532,7 @@ const ChapterReader = () => {
                     <span className={`text-sm font-bold ${ts.text}`}>{(c as any).profiles?.display_name || "Anonim"}</span>
                     <span className={`text-xs ${ts.text} opacity-40`}>{new Date(c.created_at).toLocaleDateString()}</span>
                   </div>
-                  <p className={`text-sm ${ts.text} opacity-80 pl-10 animate-fade-in`}>{c.content}</p>
+                  <p className={`text-sm ${ts.text} opacity-80 pl-10 animate-fade-in break-words whitespace-pre-wrap`}>{c.content}</p>
                 </div>
               ))}
               {comments.length === 0 && (
