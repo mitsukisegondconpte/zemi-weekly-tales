@@ -261,25 +261,27 @@ const ChapterReader = () => {
   const ts = THEME_STYLES[theme];
 
   return (
-    <div className={`min-h-screen flex flex-col ${ts.bg} transition-colors duration-300`}>
-      {/* Reading progress bar */}
+    <div className={`min-h-screen flex flex-col ${ts.bg} transition-colors duration-500`}>
+      {/* Reading progress bar with shimmer */}
       <div className="fixed top-0 left-0 right-0 z-[60] h-1">
-        <div className="h-full gradient-brand transition-all duration-150" style={{ width: `${scrollProgress}%` }} />
+        <div
+          className="h-full gradient-brand transition-all duration-200 progress-glow"
+          style={{ width: `${scrollProgress}%` }}
+        />
       </div>
 
       {/* Sticky toolbar */}
       <div className={`sticky top-0 z-50 border-b ${theme === 'dark' ? 'border-white/10 bg-[#1a1a2e]/95' : theme === 'sepia' ? 'border-[#c4a882] bg-[#f4ecd8]/95' : 'border-border bg-white/95'} backdrop-blur`}>
         <div className="flex items-center justify-between px-4 py-2.5 max-w-4xl mx-auto">
-          <Link to={`/novel/${novelId}`} className={`flex items-center gap-1.5 text-sm font-medium ${ts.text} opacity-70 hover:opacity-100`}>
-            <ChevronLeft className="h-5 w-5" /> Retounen
+          <Link to={`/novel/${novelId}`} className={`group flex items-center gap-1.5 text-sm font-medium ${ts.text} opacity-70 hover:opacity-100 transition-opacity`}>
+            <ChevronLeft className="h-5 w-5 nudge-left" /> <span className="link-underline">Retounen</span>
           </Link>
-          <span className={`text-xs font-semibold ${ts.text} opacity-60`}>
+          <span key={`${chapter.chapter_number}-${safePage}`} className={`text-xs font-semibold ${ts.text} opacity-60 animate-fade-in`}>
             Ch. {chapter.chapter_number} • Paj {safePage + 1}/{totalPages}
           </span>
           <div className="flex items-center gap-0.5">
-            {/* Settings button - VERY VISIBLE */}
             <button onClick={() => { setShowSettings(!showSettings); setShowComments(false); }}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-bold transition-all active:scale-95 ${
+              className={`btn-tactile ripple flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-bold ${
                 showSettings
                   ? "gradient-brand text-white shadow-md"
                   : `${theme === 'dark' ? 'bg-white/10 text-white' : theme === 'sepia' ? 'bg-[#d4c4a8] text-[#5b4636]' : 'bg-secondary text-secondary-foreground'}`
@@ -287,9 +289,8 @@ const ChapterReader = () => {
               <Type className="h-4 w-4" />
               <span className="hidden sm:inline">Tèks</span>
             </button>
-            {/* Comments button - VERY VISIBLE */}
             <button onClick={() => { setShowComments(!showComments); setShowSettings(false); }}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-bold transition-all active:scale-95 relative ${
+              className={`btn-tactile ripple flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-bold relative ${
                 showComments
                   ? "gradient-brand text-white shadow-md"
                   : `${theme === 'dark' ? 'bg-white/10 text-white' : theme === 'sepia' ? 'bg-[#d4c4a8] text-[#5b4636]' : 'bg-secondary text-secondary-foreground'}`
@@ -297,7 +298,10 @@ const ChapterReader = () => {
               <MessageSquare className="h-4 w-4" />
               <span className="hidden sm:inline">Kòmantè</span>
               {comments.length > 0 && (
-                <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center shadow-md">
+                <span
+                  key={comments.length}
+                  className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center shadow-md animate-pop-in"
+                >
                   {comments.length}
                 </span>
               )}
