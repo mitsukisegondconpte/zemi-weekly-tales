@@ -368,10 +368,15 @@ const ChapterReader = () => {
       </div>
 
       <main className="flex-1">
-        <div className="mx-auto px-4 py-8" style={{ maxWidth: `${maxWidth}px` }} ref={contentRef}>
+        <div key={chapterId} className="mx-auto px-4 py-8 animate-fade-in" style={{ maxWidth: `${maxWidth}px` }} ref={contentRef}>
           <div className="mb-8">
-            <span className={`text-xs font-semibold uppercase tracking-widest ${theme === 'dark' ? 'text-orange-400' : 'text-primary'}`}>Chapit {chapter.chapter_number}</span>
-            <h1 className={`text-2xl md:text-3xl font-black font-serif ${ts.text} mt-1`}>{chapter.title}</h1>
+            <span className={`text-xs font-semibold uppercase tracking-widest ${theme === 'dark' ? 'text-orange-400' : 'text-primary'} animate-fade-in-left`}>Chapit {chapter.chapter_number}</span>
+            <h1
+              key={`title-${chapter.id}`}
+              className={`typewriter-title text-2xl md:text-3xl font-black font-serif ${ts.text} mt-1`}
+            >
+              {chapter.title}
+            </h1>
           </div>
 
           {/* Watermark for premium */}
@@ -382,13 +387,23 @@ const ChapterReader = () => {
               </div>
             )}
 
-            {/* Render current page - HTML content support */}
-            <div className={`${ts.text} chapter-content`}>
+            {/* Render current page with staggered fade-in from left */}
+            <div
+              key={`page-${chapter.id}-${safePage}`}
+              className={`${ts.text} chapter-content stagger-children`}
+              style={{ ["--stagger" as any]: "55ms" }}
+            >
               {pages[safePage]?.map((block, i) => {
                 if (block.includes("<")) {
-                  return <div key={i} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(block) }} />;
+                  return (
+                    <div
+                      key={i}
+                      style={{ ["--i" as any]: i }}
+                      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(block) }}
+                    />
+                  );
                 }
-                return <p key={i} className="mb-6">{block}</p>;
+                return <p key={i} style={{ ["--i" as any]: i }} className="mb-6">{block}</p>;
               })}
             </div>
           </article>
