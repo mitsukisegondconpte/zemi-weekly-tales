@@ -33,7 +33,8 @@ export const usePublishedNovels = () =>
         .from("novels")
         .select("*")
         .eq("status", "published")
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(200);
       if (error) throw error;
       return (data ?? []) as Novel[];
     },

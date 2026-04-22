@@ -91,10 +91,15 @@ const ChapterReader = () => {
 
   useEffect(() => {
     if (user && chapterId && novelId && chapter) {
-      supabase.from("reading_history").upsert(
-        { user_id: user.id, novel_id: novelId, chapter_id: chapterId, read_at: new Date().toISOString() },
-        { onConflict: "user_id,chapter_id" }
-      ).then(() => {});
+      supabase
+        .from("reading_history")
+        .upsert(
+          { user_id: user.id, novel_id: novelId, chapter_id: chapterId, read_at: new Date().toISOString() },
+          { onConflict: "user_id,chapter_id" }
+        )
+        .then(({ error }) => {
+          if (error) console.error("Error saving reading history:", error);
+        });
     }
   }, [user, chapterId, novelId, chapter]);
 
