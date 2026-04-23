@@ -257,6 +257,84 @@ const Profile = () => {
                 </div>
               </div>
 
+              {/* ===== AUTHOR CTA / STATUS ===== */}
+              <div className="rounded-xl border border-primary/30 bg-gradient-to-br from-primary/5 via-card to-card p-5 shadow-sm">
+                <div className="flex items-start gap-3">
+                  <div className="h-11 w-11 rounded-xl gradient-brand flex items-center justify-center shrink-0 shadow-md">
+                    <PenTool className="h-5 w-5 text-primary-foreground" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    {isAuthor ? (
+                      <>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="font-bold text-foreground font-serif">
+                            {isVerified ? "Ekriven Verifye" : "Ekriven"}
+                          </h3>
+                          {isVerified ? (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary text-primary-foreground">
+                              <CheckCircle2 className="h-3 w-3" /> Verifye
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">
+                              <Clock className="h-3 w-3" /> An tann verifikasyon
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1 mb-3">
+                          {isVerified
+                            ? "Ou ka pibliye chapit dirèkteman."
+                            : "Chapit ou yo ap pase nan moderasyon avan yo pibliye."}
+                        </p>
+                        <Link
+                          to="/author/dashboard"
+                          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl gradient-brand text-primary-foreground text-sm font-bold shadow-md hover:opacity-90 active:scale-95 btn-tactile"
+                        >
+                          <Sparkles className="h-4 w-4" /> Tablodbò Ekriven
+                        </Link>
+                      </>
+                    ) : myApp?.status === "pending" ? (
+                      <>
+                        <h3 className="font-bold text-foreground font-serif flex items-center gap-2">
+                          Aplikasyon w an Atant
+                          <Clock className="h-4 w-4 text-primary animate-pulse" />
+                        </h3>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Admin ap revize aplikasyon w. N ap voye yon notifikasyon ba ou byento.
+                        </p>
+                      </>
+                    ) : myApp?.status === "rejected" ? (
+                      <>
+                        <h3 className="font-bold text-foreground font-serif flex items-center gap-2">
+                          Aplikasyon Refize <XCircle className="h-4 w-4 text-destructive" />
+                        </h3>
+                        {myApp.admin_notes && (
+                          <p className="text-xs text-muted-foreground mt-1 mb-2 italic">"{myApp.admin_notes}"</p>
+                        )}
+                        <button
+                          onClick={() => setShowAuthorModal(true)}
+                          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-secondary text-foreground text-sm font-bold hover:bg-secondary/80 active:scale-95"
+                        >
+                          Aplike Ankò
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <h3 className="font-bold text-foreground font-serif">Devni Ekriven</h3>
+                        <p className="text-xs text-muted-foreground mt-1 mb-3">
+                          Pataje pwòp istwa w yo ak kominote a. Ekri, pibliye, epi touche coins.
+                        </p>
+                        <button
+                          onClick={() => setShowAuthorModal(true)}
+                          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl gradient-brand text-primary-foreground text-sm font-bold shadow-md hover:opacity-90 active:scale-95 btn-tactile ripple"
+                        >
+                          <Sparkles className="h-4 w-4" /> Aplike Kounye a
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+
               {/* Notifications */}
               <div className="rounded-xl border border-border bg-card p-5">
                 <h2 className="text-lg font-bold font-serif text-foreground mb-3 flex items-center gap-2">
@@ -461,6 +539,7 @@ const Profile = () => {
       </main>
       <Footer />
       <BottomNav />
+      <AuthorApplicationModal open={showAuthorModal} onOpenChange={setShowAuthorModal} />
     </div>
   );
 };
