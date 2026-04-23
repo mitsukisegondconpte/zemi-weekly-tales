@@ -129,17 +129,25 @@ const Header = () => {
                         <p className="p-4 text-center text-muted-foreground text-sm animate-fade-in">Pa gen notifikasyon.</p>
                       ) : (
                         notifications.map((n: any, i: number) => (
-                          <div
+                          <button
                             key={n.id}
+                            onClick={() => handleNotifClick(n)}
                             style={{ animationDelay: `${i * 40}ms` }}
-                            className={`p-3 border-b border-border last:border-0 animate-fade-in-left ${!n.is_read ? "bg-primary/5" : ""}`}
+                            className={`w-full text-left p-3 border-b border-border last:border-0 animate-fade-in-left hover:bg-secondary transition-colors ${!n.is_read ? "bg-primary/5" : ""}`}
                           >
                             <p className="font-medium text-foreground text-sm">{n.title}</p>
-                            <p className="text-muted-foreground text-xs">{n.message}</p>
-                            <p className="text-muted-foreground text-[10px] mt-1">{new Date(n.created_at).toLocaleString()}</p>
-                          </div>
+                            <p className="text-muted-foreground text-xs line-clamp-2">{n.message}</p>
+                            <p className="text-muted-foreground text-[10px] mt-1">{formatRelative(n.created_at)}</p>
+                          </button>
                         ))
                       )}
+                      <Link
+                        to="/notifications"
+                        onClick={() => setShowNotifs(false)}
+                        className="block p-3 text-center text-xs font-bold text-primary border-t border-border hover:bg-secondary transition-colors"
+                      >
+                        Wè tout notifikasyon →
+                      </Link>
                     </div>
                   </>
                 )}
