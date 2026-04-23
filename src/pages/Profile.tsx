@@ -1,13 +1,15 @@
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import BottomNav from "@/components/BottomNav";
-import { Coins, BookOpen, Heart, History, Key, Lock, LogOut, Bell, Shield, ChevronRight } from "lucide-react";
+import { Coins, BookOpen, Heart, History, Key, Lock, LogOut, Bell, Shield, ChevronRight, Sparkles, PenTool, CheckCircle2, Clock, XCircle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
+import AuthorApplicationModal from "@/components/AuthorApplicationModal";
+import { useIsAuthor, useIsVerifiedAuthor, useMyApplication } from "@/hooks/useAuthor";
 
 const COIN_PACKAGES = [
   { coins: 50, price: "$2.99", popular: false },
@@ -29,6 +31,10 @@ const Profile = () => {
   const [activeTab, setActiveTab] = useState("overview");
   const [code, setCode] = useState("");
   const [redeeming, setRedeeming] = useState(false);
+  const [showAuthorModal, setShowAuthorModal] = useState(false);
+  const isAuthor = useIsAuthor();
+  const isVerified = useIsVerifiedAuthor();
+  const { data: myApp } = useMyApplication();
   // Password change
   const [oldPw, setOldPw] = useState("");
   const [newPw, setNewPw] = useState("");
