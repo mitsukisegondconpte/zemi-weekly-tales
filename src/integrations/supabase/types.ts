@@ -14,6 +14,78 @@ export type Database = {
   }
   public: {
     Tables: {
+      author_applications: {
+        Row: {
+          admin_notes: string | null
+          bio: string
+          created_at: string
+          id: string
+          motivation: string
+          portfolio_url: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          bio: string
+          created_at?: string
+          id?: string
+          motivation: string
+          portfolio_url?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          admin_notes?: string | null
+          bio?: string
+          created_at?: string
+          id?: string
+          motivation?: string
+          portfolio_url?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      chapter_moderation: {
+        Row: {
+          admin_id: string
+          chapter_id: string
+          created_at: string
+          id: string
+          notes: string | null
+          reason: string | null
+          status: string
+        }
+        Insert: {
+          admin_id: string
+          chapter_id: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          reason?: string | null
+          status: string
+        }
+        Update: {
+          admin_id?: string
+          chapter_id?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          reason?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       chapters: {
         Row: {
           author_id: string | null
@@ -470,6 +542,42 @@ export type Database = {
           },
         ]
       }
+      user_notifications: {
+        Row: {
+          created_at: string
+          id: string
+          is_read: boolean
+          link: string | null
+          message: string
+          related_id: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          link?: string | null
+          message?: string
+          related_id?: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          link?: string | null
+          message?: string
+          related_id?: string | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
@@ -560,8 +668,31 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_author: { Args: { _user_id: string }; Returns: boolean }
+      is_verified_author: { Args: { _user_id: string }; Returns: boolean }
+      moderate_chapter: {
+        Args: {
+          _chapter_id: string
+          _decision: string
+          _notes?: string
+          _reason?: string
+        }
+        Returns: undefined
+      }
       publish_scheduled_content: { Args: never; Returns: undefined }
       redeem_coin_code: { Args: { _code: string }; Returns: number }
+      review_author_application: {
+        Args: {
+          _admin_notes?: string
+          _application_id: string
+          _decision: string
+        }
+        Returns: undefined
+      }
+      submit_author_application: {
+        Args: { _bio: string; _motivation: string; _portfolio_url?: string }
+        Returns: string
+      }
       unlock_chapter: { Args: { _chapter_id: string }; Returns: number }
     }
     Enums: {
