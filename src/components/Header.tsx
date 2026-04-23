@@ -2,36 +2,22 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Coins, Shield, LogOut, Bell, Moon, Sun } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useUserNotifications, useUnreadCount, useMarkAllRead, useMarkNotificationRead, formatRelative } from "@/hooks/useAuthor";
 import zemiLogo from "@/assets/zemi-logo.jpg";
 
 const Header = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, isAdmin, profile, signOut } = useAuth();
-  const queryClient = useQueryClient();
   const [darkMode, setDarkMode] = useState(() => document.documentElement.classList.contains("dark"));
   const [showNotifs, setShowNotifs] = useState(false);
 
   const coins = profile?.coins ?? 0;
 
-  // Notifications
-  const { data: notifications = [] } = useQuery({
-    queryKey: ["header_notifications", user?.id],
-    enabled: !!user,
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("notifications")
-        .select("*")
-        .eq("user_id", user!.id)
-        .order("created_at", { ascending: false })
-        .limit(10);
-      return data ?? [];
-    },
-  });
-
-  const unreadCount = notifications.filter((n: any) => !n.is_read).length;
+  const { data: notifications = [] } = useUserNotifications(10);
+  const { data: unreadCount = 0 } = useUnreadCount();
+  const markAll = useMarkAllRead();
+  const markOne = useMarkNotificationRead();
 
   const toggleDark = () => {
     const next = !darkMode;
@@ -49,15 +35,12 @@ const Header = () => {
     }
   }, []);
 
-  const markAllRead = async () => {
-    if (!user) return;
-    await supabase
-      .from("notifications")
-      .update({ is_read: true })
-      .eq("user_id", user.id)
-      .eq("is_read", false);
-    queryClient.invalidateQueries({ queryKey: ["header_notifications"] });
-    queryClient.invalidateQueries({ queryKey: ["notifications"] });
+  const markAllRead = () => markAll.mutate();
+
+  const handleNotifClick = (n: any) => {
+    if (!n.is_read) markOne.mutate(n.id);
+    setShowNotifs(false);
+    if (n.link) navigate(n.link);
   };
 
   const handleSignOut = async () => {
@@ -146,17 +129,25 @@ const Header = () => {
                         <p className="p-4 text-center text-muted-foreground text-sm animate-fade-in">Pa gen notifikasyon.</p>
                       ) : (
                         notifications.map((n: any, i: number) => (
-                          <div
+                          <button
                             key={n.id}
+                            onClick={() => handleNotifClick(n)}
                             style={{ animationDelay: `${i * 40}ms` }}
-                            className={`p-3 border-b border-border last:border-0 animate-fade-in-left ${!n.is_read ? "bg-primary/5" : ""}`}
+                            className={`w-full text-left p-3 border-b border-border last:border-0 animate-fade-in-left hover:bg-secondary transition-colors ${!n.is_read ? "bg-primary/5" : ""}`}
                           >
                             <p className="font-medium text-foreground text-sm">{n.title}</p>
-                            <p className="text-muted-foreground text-xs">{n.message}</p>
-                            <p className="text-muted-foreground text-[10px] mt-1">{new Date(n.created_at).toLocaleString()}</p>
-                          </div>
+                            <p className="text-muted-foreground text-xs line-clamp-2">{n.message}</p>
+                            <p className="text-muted-foreground text-[10px] mt-1">{formatRelative(n.created_at)}</p>
+                          </button>
                         ))
                       )}
+                      <Link
+                        to="/notifications"
+                        onClick={() => setShowNotifs(false)}
+                        className="block p-3 text-center text-xs font-bold text-primary border-t border-border hover:bg-secondary transition-colors"
+                      >
+                        Wè tout notifikasyon →
+                      </Link>
                     </div>
                   </>
                 )}

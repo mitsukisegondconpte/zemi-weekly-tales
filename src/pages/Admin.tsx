@@ -1,17 +1,21 @@
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { useState, useRef } from "react";
-import { BookOpen, Coins, BarChart3, FileText, Plus, Trash2, Edit, Save, X, Eye, EyeOff, Key, Calendar, AlertTriangle, Image, Upload, MessageSquare, Loader2 } from "lucide-react";
+import { BookOpen, Coins, BarChart3, FileText, Plus, Trash2, Edit, Save, X, Eye, EyeOff, Key, Calendar, AlertTriangle, Image, Upload, MessageSquare, Loader2, UserCheck, ShieldCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdminNovels, useAdminChapters, GENRES } from "@/hooks/useNovels";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import ReactQuill from "react-quill-new";
 import "react-quill-new/dist/quill.snow.css";
+import AdminAuthorReview from "@/components/AdminAuthorReview";
+import AdminChapterModeration from "@/components/AdminChapterModeration";
 
 const TABS = [
   { id: "novels", label: "Novèl", icon: BookOpen },
   { id: "chapters", label: "Chapit", icon: FileText },
+  { id: "authors", label: "Aplikasyon Otè", icon: UserCheck },
+  { id: "moderation", label: "Moderasyon", icon: ShieldCheck },
   { id: "codes", label: "Kòd Coins", icon: Key },
   { id: "comments", label: "Kòmantè", icon: MessageSquare },
   { id: "stats", label: "Statistik", icon: BarChart3 },
@@ -634,6 +638,12 @@ const Admin = () => {
               {!selectedNovelId && <p className="text-muted-foreground text-center py-8">Chwazi yon novèl pou wè chapit li yo.</p>}
             </div>
           )}
+
+          {/* ========== AUTHOR APPLICATIONS TAB ========== */}
+          {tab === "authors" && <AdminAuthorReview />}
+
+          {/* ========== CHAPTER MODERATION TAB ========== */}
+          {tab === "moderation" && <AdminChapterModeration />}
 
           {/* ========== CODES TAB ========== */}
           {tab === "codes" && (
