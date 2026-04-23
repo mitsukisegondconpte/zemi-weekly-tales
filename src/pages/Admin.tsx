@@ -639,6 +639,12 @@ const Admin = () => {
             </div>
           )}
 
+          {/* ========== AUTHOR APPLICATIONS TAB ========== */}
+          {tab === "authors" && <AdminAuthorReview />}
+
+          {/* ========== CHAPTER MODERATION TAB ========== */}
+          {tab === "moderation" && <AdminChapterModeration />}
+
           {/* ========== CODES TAB ========== */}
           {tab === "codes" && (
             <div>
