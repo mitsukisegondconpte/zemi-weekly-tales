@@ -16,39 +16,48 @@ export type Database = {
     Tables: {
       chapters: {
         Row: {
+          author_id: string | null
           chapter_number: number
           coin_price: number
           content: string
           created_at: string
           id: string
           is_premium: boolean
+          moderation_status: string
           novel_id: string
+          rejection_reason: string | null
           scheduled_at: string | null
           status: string
           title: string
           updated_at: string
         }
         Insert: {
+          author_id?: string | null
           chapter_number: number
           coin_price?: number
           content?: string
           created_at?: string
           id?: string
           is_premium?: boolean
+          moderation_status?: string
           novel_id: string
+          rejection_reason?: string | null
           scheduled_at?: string | null
           status?: string
           title: string
           updated_at?: string
         }
         Update: {
+          author_id?: string | null
           chapter_number?: number
           coin_price?: number
           content?: string
           created_at?: string
           id?: string
           is_premium?: boolean
+          moderation_status?: string
           novel_id?: string
+          rejection_reason?: string | null
           scheduled_at?: string | null
           status?: string
           title?: string
@@ -301,6 +310,7 @@ export type Database = {
       novels: {
         Row: {
           author: string
+          author_id: string | null
           cover_url: string | null
           created_at: string
           created_by: string | null
@@ -315,6 +325,7 @@ export type Database = {
         }
         Insert: {
           author: string
+          author_id?: string | null
           cover_url?: string | null
           created_at?: string
           created_by?: string | null
@@ -329,6 +340,7 @@ export type Database = {
         }
         Update: {
           author?: string
+          author_id?: string | null
           cover_url?: string | null
           created_at?: string
           created_by?: string | null
@@ -553,7 +565,7 @@ export type Database = {
       unlock_chapter: { Args: { _chapter_id: string }; Returns: number }
     }
     Enums: {
-      app_role: "admin" | "moderator" | "user"
+      app_role: "admin" | "moderator" | "user" | "author" | "verified_author"
       novel_genre:
         | "Romantik"
         | "Dram"
@@ -692,7 +704,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "moderator", "user"],
+      app_role: ["admin", "moderator", "user", "author", "verified_author"],
       novel_genre: [
         "Romantik",
         "Dram",
