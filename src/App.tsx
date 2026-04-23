@@ -16,6 +16,8 @@ import Admin from "./pages/Admin";
 import SearchPage from "./pages/SearchPage";
 import LecturePage from "./pages/LecturePage";
 import CanvasPage from "./pages/CanvasPage";
+import Notifications from "./pages/Notifications";
+import AuthorDashboard from "./pages/AuthorDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -38,6 +40,8 @@ const App = () => (
             <Route path="/lecture" element={<LecturePage />} />
             <Route path="/canvas" element={<CanvasPage />} />
             <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+            <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
+            <Route path="/author/dashboard" element={<ProtectedRoute><AuthorDashboard /></ProtectedRoute>} />
             <Route path="/admin" element={<ProtectedRoute adminOnly><Admin /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
