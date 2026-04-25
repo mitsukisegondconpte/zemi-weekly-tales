@@ -4,9 +4,26 @@ import BottomNav from "@/components/BottomNav";
 import { useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { useIsAuthor, useIsVerifiedAuthor, useMyNovels, useMyChapters } from "@/hooks/useAuthor";
-import { BookOpen, Plus, Edit, Eye, Clock, CheckCircle2, XCircle, Sparkles, BadgeCheck, Loader2, ArrowRight } from "lucide-react";
+import {
+  useIsAuthor,
+  useIsVerifiedAuthor,
+  useMyNovels,
+  useMyChapters,
+} from "@/hooks/useAuthor";
+import {
+  BookOpen, Plus, Edit, Eye, Clock, CheckCircle2, XCircle,
+  Sparkles, BadgeCheck, Loader2, ArrowRight, Trash2, FileText,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
+import NovelEditorModal from "@/components/author/NovelEditorModal";
+import ChapterEditorModal from "@/components/author/ChapterEditorModal";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 const StatusBadge = ({ status }: { status: string }) => {
   const map: Record<string, { label: string; icon: typeof Clock; cls: string }> = {
@@ -27,9 +44,16 @@ const AuthorDashboard = () => {
   const { user, loading } = useAuth();
   const isAuthor = useIsAuthor();
   const isVerified = useIsVerifiedAuthor();
+  const queryClient = useQueryClient();
   const { data: novels = [], isLoading: novelsLoading } = useMyNovels();
   const [selectedNovel, setSelectedNovel] = useState<string | undefined>();
   const { data: chapters = [], isLoading: chaptersLoading } = useMyChapters(selectedNovel);
+
+  const [novelModalOpen, setNovelModalOpen] = useState(false);
+  const [editingNovel, setEditingNovel] = useState<any | null>(null);
+  const [chapterModalOpen, setChapterModalOpen] = useState(false);
+  const [editingChapter, setEditingChapter] = useState<any | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<{ kind: "novel" | "chapter"; id: string; title: string } | null>(null);
 
   if (loading) {
     return (
@@ -62,6 +86,35 @@ const AuthorDashboard = () => {
     );
   }
 
+  const openNewNovel = () => { setEditingNovel(null); setNovelModalOpen(true); };
+  const openEditNovel = (n: any) => { setEditingNovel(n); setNovelModalOpen(true); };
+  const openNewChapter = () => { setEditingChapter(null); setChapterModalOpen(true); };
+  const openEditChapter = (c: any) => { setEditingChapter(c); setChapterModalOpen(true); };
+
+  const performDelete = async () => {
+    if (!confirmDelete) return;
+    const { kind, id } = confirmDelete;
+    if (kind === "novel") {
+      const { error } = await supabase.from("novels").delete().eq("id", id);
+      if (error) { toast.error(error.message); return; }
+      toast.success("Novèl efase");
+      if (selectedNovel === id) setSelectedNovel(undefined);
+      queryClient.invalidateQueries({ queryKey: ["my_novels"] });
+    } else {
+      const { error } = await supabase.from("chapters").delete().eq("id", id);
+      if (error) { toast.error(error.message); return; }
+      toast.success("Chapit efase");
+      queryClient.invalidateQueries({ queryKey: ["my_chapters"] });
+    }
+    setConfirmDelete(null);
+  };
+
+  const nextChapterNumber = chapters.length > 0
+    ? Math.max(...chapters.map((c: any) => c.chapter_number ?? 0)) + 1
+    : 1;
+
+  const selectedNovelData = novels.find((n: any) => n.id === selectedNovel);
+
   return (
     <div className="min-h-screen flex flex-col bg-background pb-20 md:pb-0">
       <Header />
@@ -89,11 +142,9 @@ const AuthorDashboard = () => {
                     : "Chapit ou yo bezwen apwobasyon admin avan yo pibliye."}
                 </p>
               </div>
-              <Link to="/admin">
-                <Button variant="outline" className="btn-tactile">
-                  <Plus className="h-4 w-4 mr-1.5" /> Kreye nan Admin
-                </Button>
-              </Link>
+              <Button onClick={openNewNovel} className="gradient-brand text-primary-foreground btn-tactile">
+                <Plus className="h-4 w-4 mr-1.5" /> Nouvo Novèl
+              </Button>
             </div>
           </div>
 
@@ -118,7 +169,9 @@ const AuthorDashboard = () => {
 
           {/* My Novels */}
           <section className="mb-8">
-            <h2 className="text-lg font-bold font-serif text-foreground mb-3">Novèl mwen yo</h2>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-lg font-bold font-serif text-foreground">Novèl mwen yo</h2>
+            </div>
             {novelsLoading ? (
               <div className="space-y-2">
                 {[...Array(3)].map((_, i) => (
@@ -129,7 +182,9 @@ const AuthorDashboard = () => {
               <div className="text-center py-12 rounded-2xl border border-dashed border-border">
                 <BookOpen className="h-10 w-10 text-muted-foreground/40 mx-auto mb-2" />
                 <p className="text-muted-foreground">Ou poko gen okenn novèl.</p>
-                <p className="text-muted-foreground text-xs mt-1">Kreye yon nan Admin Panel.</p>
+                <Button onClick={openNewNovel} variant="outline" className="mt-4 btn-tactile">
+                  <Plus className="h-4 w-4 mr-1.5" /> Kreye premye novèl ou
+                </Button>
               </div>
             ) : (
               <div className="space-y-2">
@@ -158,13 +213,30 @@ const AuthorDashboard = () => {
                         </span>
                       </div>
                     </div>
-                    <Link
-                      to={`/novel/${n.id}`}
-                      onClick={(e) => e.stopPropagation()}
-                      className="p-2 rounded-lg hover:bg-secondary text-muted-foreground btn-tactile"
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Link>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); openEditNovel(n); }}
+                        className="p-2 rounded-lg hover:bg-secondary text-muted-foreground btn-tactile"
+                        aria-label="Modifye"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </button>
+                      <Link
+                        to={`/novel/${n.id}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="p-2 rounded-lg hover:bg-secondary text-muted-foreground btn-tactile"
+                        aria-label="Wè"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Link>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setConfirmDelete({ kind: "novel", id: n.id, title: n.title }); }}
+                        className="p-2 rounded-lg hover:bg-destructive/10 text-destructive btn-tactile"
+                        aria-label="Efase"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -174,7 +246,18 @@ const AuthorDashboard = () => {
           {/* Chapters of selected novel */}
           {selectedNovel && (
             <section className="animate-fade-in">
-              <h2 className="text-lg font-bold font-serif text-foreground mb-3">Chapit yo</h2>
+              <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+                <h2 className="text-lg font-bold font-serif text-foreground">
+                  Chapit{selectedNovelData ? ` — ${selectedNovelData.title}` : ""}
+                </h2>
+                <Button
+                  size="sm"
+                  onClick={openNewChapter}
+                  className="gradient-brand text-primary-foreground btn-tactile"
+                >
+                  <Plus className="h-4 w-4 mr-1.5" /> Ajoute Chapit
+                </Button>
+              </div>
               {chaptersLoading ? (
                 <div className="space-y-2">
                   {[...Array(3)].map((_, i) => (
@@ -182,7 +265,13 @@ const AuthorDashboard = () => {
                   ))}
                 </div>
               ) : chapters.length === 0 ? (
-                <p className="text-muted-foreground text-sm text-center py-8">Pa gen chapit.</p>
+                <div className="text-center py-10 rounded-2xl border border-dashed border-border">
+                  <FileText className="h-10 w-10 text-muted-foreground/40 mx-auto mb-2" />
+                  <p className="text-muted-foreground text-sm">Pa gen chapit ankò.</p>
+                  <Button onClick={openNewChapter} variant="outline" size="sm" className="mt-3 btn-tactile">
+                    <Plus className="h-4 w-4 mr-1.5" /> Premye chapit
+                  </Button>
+                </div>
               ) : (
                 <div className="space-y-2">
                   {chapters.map((c: any, i) => (
@@ -209,6 +298,22 @@ const AuthorDashboard = () => {
                           </p>
                         )}
                       </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          onClick={() => openEditChapter(c)}
+                          className="p-2 rounded-lg hover:bg-secondary text-muted-foreground btn-tactile"
+                          aria-label="Modifye"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => setConfirmDelete({ kind: "chapter", id: c.id, title: c.title })}
+                          className="p-2 rounded-lg hover:bg-destructive/10 text-destructive btn-tactile"
+                          aria-label="Efase"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -217,6 +322,40 @@ const AuthorDashboard = () => {
           )}
         </div>
       </main>
+
+      <NovelEditorModal
+        open={novelModalOpen}
+        onOpenChange={setNovelModalOpen}
+        novel={editingNovel}
+      />
+      {selectedNovel && (
+        <ChapterEditorModal
+          open={chapterModalOpen}
+          onOpenChange={setChapterModalOpen}
+          novelId={selectedNovel}
+          chapter={editingChapter}
+          nextChapterNumber={nextChapterNumber}
+        />
+      )}
+
+      <AlertDialog open={!!confirmDelete} onOpenChange={(o) => !o && setConfirmDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Efase {confirmDelete?.kind === "novel" ? "novèl" : "chapit"} sa a?</AlertDialogTitle>
+            <AlertDialogDescription>
+              "{confirmDelete?.title}" — Aksyon sa a pa ka defèt.
+              {confirmDelete?.kind === "novel" && " Tout chapit yo pral efase tou."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Anile</AlertDialogCancel>
+            <AlertDialogAction onClick={performDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Efase
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <Footer />
       <BottomNav />
     </div>
