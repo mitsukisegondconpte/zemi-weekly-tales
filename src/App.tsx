@@ -18,9 +18,16 @@ import LecturePage from "./pages/LecturePage";
 import CanvasPage from "./pages/CanvasPage";
 import Notifications from "./pages/Notifications";
 import AuthorDashboard from "./pages/AuthorDashboard";
+import Favorites from "./pages/Favorites";
 import NotFound from "./pages/NotFound";
+import { useRealtimeNotifications } from "@/hooks/useExtra";
 
 const queryClient = new QueryClient();
+
+const RealtimeBootstrap = () => {
+  useRealtimeNotifications();
+  return null;
+};
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -29,6 +36,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
+          <RealtimeBootstrap />
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/novel/:id" element={<NovelDetail />} />
@@ -40,6 +48,7 @@ const App = () => (
             <Route path="/lecture" element={<LecturePage />} />
             <Route path="/canvas" element={<CanvasPage />} />
             <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+            <Route path="/favorites" element={<ProtectedRoute><Favorites /></ProtectedRoute>} />
             <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
             <Route path="/author/dashboard" element={<ProtectedRoute><AuthorDashboard /></ProtectedRoute>} />
             <Route path="/admin" element={<ProtectedRoute adminOnly><Admin /></ProtectedRoute>} />
