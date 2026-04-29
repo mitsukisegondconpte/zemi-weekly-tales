@@ -10,9 +10,11 @@ import {
   useMyNovels,
   useMyChapters,
 } from "@/hooks/useAuthor";
+import { useAuthorStats } from "@/hooks/useExtra";
 import {
   BookOpen, Plus, Edit, Eye, Clock, CheckCircle2, XCircle,
   Sparkles, BadgeCheck, Loader2, ArrowRight, Trash2, FileText,
+  MessageSquare, Coins, TrendingUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import NovelEditorModal from "@/components/author/NovelEditorModal";
@@ -46,6 +48,7 @@ const AuthorDashboard = () => {
   const isVerified = useIsVerifiedAuthor();
   const queryClient = useQueryClient();
   const { data: novels = [], isLoading: novelsLoading } = useMyNovels();
+  const { data: stats } = useAuthorStats(user?.id);
   const [selectedNovel, setSelectedNovel] = useState<string | undefined>();
   const { data: chapters = [], isLoading: chaptersLoading } = useMyChapters(selectedNovel);
 
