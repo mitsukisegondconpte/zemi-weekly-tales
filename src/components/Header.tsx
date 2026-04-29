@@ -49,27 +49,20 @@ const Header = () => {
   };
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 animate-fade-in">
+    <header className="sticky top-0 z-50 border-b border-border bg-background">
       <div className="container flex h-14 items-center justify-between">
-        <Link to="/" className="group flex items-center gap-2 btn-tactile">
-          <img
-            src={zemiLogo}
-            alt="ZEMI"
-            className="h-9 w-9 rounded-lg object-contain shadow-md transition-transform duration-500 group-hover:rotate-[-6deg] group-hover:scale-110"
-          />
-          <div className="flex flex-col leading-none">
-            <span className="text-lg font-black tracking-tight font-serif text-foreground">ZEMI</span>
-            <span className="text-[9px] font-medium italic text-muted-foreground">chak semèn</span>
-          </div>
+        <Link to="/" className="flex items-center gap-2">
+          <img src={zemiLogo} alt="ZEMI" className="h-8 w-8 rounded object-contain" />
+          <span className="text-base font-semibold tracking-tight text-foreground">ZEMI</span>
+          <span className="text-[10px] text-muted-foreground hidden sm:inline">· chak semèn</span>
         </Link>
 
-        {/* Admin link */}
         <nav className="flex items-center gap-4">
           {isAdmin && (
             <Link
               to="/admin"
-              className={`link-underline flex items-center gap-1.5 text-sm font-medium transition-colors hover:text-primary ${
-                location.pathname === "/admin" ? "text-primary is-active" : "text-muted-foreground"
+              className={`flex items-center gap-1.5 text-sm transition-colors hover:text-primary ${
+                location.pathname === "/admin" ? "text-primary" : "text-muted-foreground"
               }`}
             >
               <Shield className="h-4 w-4" />
@@ -78,62 +71,52 @@ const Header = () => {
           )}
         </nav>
 
-        {/* Right side */}
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1">
           {user && (
-            <Link to="/profile" className="coin-badge btn-tactile flex items-center gap-1.5 text-xs">
-              <Coins className="h-3.5 w-3.5 animate-float" />
-              <span key={coins} className="inline-block animate-pop-in">{coins}</span>
+            <Link to="/profile" className="coin-badge flex items-center gap-1">
+              <Coins className="h-3.5 w-3.5 text-primary" />
+              <span>{coins}</span>
             </Link>
           )}
 
           <button
             onClick={toggleDark}
-            className="btn-tactile ripple p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary"
+            className="p-2 rounded text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
             title={darkMode ? "Mode klè" : "Mode nwa"}
           >
-            <span key={darkMode ? "sun" : "moon"} className="inline-block animate-pop-in">
-              {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-            </span>
+            {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </button>
 
           {user && (
             <>
-              {/* Notifications */}
               <div className="relative">
                 <button
                   onClick={() => setShowNotifs(!showNotifs)}
-                  className="btn-tactile ripple p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary relative"
+                  className="p-2 rounded text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors relative"
                 >
-                  <Bell className={`h-4 w-4 ${unreadCount > 0 ? "animate-wobble" : ""}`} />
+                  <Bell className="h-4 w-4" />
                   {unreadCount > 0 && (
-                    <span
-                      key={unreadCount}
-                      className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center animate-badge-pulse"
-                    >
-                      {unreadCount}
-                    </span>
+                    <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-destructive" />
                   )}
                 </button>
                 {showNotifs && (
                   <>
                     <div className="fixed inset-0 z-40" onClick={() => setShowNotifs(false)} />
-                    <div className="absolute right-0 top-full mt-2 w-80 max-h-96 overflow-y-auto rounded-xl border border-border bg-card shadow-2xl z-50 animate-scale-in origin-top-right">
+                    <div className="absolute right-0 top-full mt-2 w-80 max-h-96 overflow-y-auto rounded border border-border bg-card shadow-lg z-50">
                       <div className="p-3 border-b border-border flex items-center justify-between">
-                        <h3 className="font-bold text-foreground text-sm">Notifikasyon</h3>
+                        <h3 className="font-semibold text-foreground text-sm">Notifikasyon</h3>
                         {unreadCount > 0 && (
-                          <button onClick={markAllRead} className="text-xs text-primary link-underline">Make tout li</button>
+                          <button onClick={markAllRead} className="text-xs text-primary hover:underline">Make tout li</button>
                         )}
                       </div>
                       {notifications.length === 0 ? (
-                        <p className="p-4 text-center text-muted-foreground text-sm animate-fade-in">Pa gen notifikasyon.</p>
+                        <p className="p-4 text-center text-muted-foreground text-sm">Pa gen notifikasyon.</p>
                       ) : (
-                        notifications.map((n: any, i: number) => (
+                        notifications.map((n: any) => (
                           <button
                             key={n.id}
                             onClick={() => handleNotifClick(n)}
-                            style={{ animationDelay: `${i * 40}ms` }}
-                            className={`w-full text-left p-3 border-b border-border last:border-0 animate-fade-in-left hover:bg-secondary transition-colors ${!n.is_read ? "bg-primary/5" : ""}`}
+                            className={`w-full text-left p-3 border-b border-border last:border-0 hover:bg-secondary transition-colors ${!n.is_read ? "bg-primary/5" : ""}`}
                           >
                             <p className="font-medium text-foreground text-sm">{n.title}</p>
                             <p className="text-muted-foreground text-xs line-clamp-2">{n.message}</p>
@@ -144,9 +127,9 @@ const Header = () => {
                       <Link
                         to="/notifications"
                         onClick={() => setShowNotifs(false)}
-                        className="block p-3 text-center text-xs font-bold text-primary border-t border-border hover:bg-secondary transition-colors"
+                        className="block p-3 text-center text-xs text-primary border-t border-border hover:bg-secondary transition-colors"
                       >
-                        Wè tout notifikasyon →
+                        Wè tout notifikasyon
                       </Link>
                     </div>
                   </>
@@ -155,13 +138,13 @@ const Header = () => {
 
               <Link
                 to="/profile"
-                className="avatar-wobble h-8 w-8 rounded-full gradient-brand flex items-center justify-center text-primary-foreground font-bold text-xs shadow-md"
+                className="h-8 w-8 rounded-full bg-secondary border border-border flex items-center justify-center text-foreground font-medium text-xs"
               >
                 {(profile?.display_name || user.email || "U")[0].toUpperCase()}
               </Link>
               <button
                 onClick={handleSignOut}
-                className="btn-tactile ripple p-2 rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                className="p-2 rounded text-muted-foreground hover:text-destructive hover:bg-secondary transition-colors"
                 title="Dekonekte"
               >
                 <LogOut className="h-4 w-4" />
@@ -171,12 +154,12 @@ const Header = () => {
 
           {!user && (
             <div className="flex gap-2">
-              <Link to="/login" className="link-underline px-3 py-1.5 text-sm font-medium text-foreground hover:text-primary">
+              <Link to="/login" className="px-3 py-1.5 text-sm text-foreground hover:text-primary transition-colors">
                 Konekte
               </Link>
               <Link
                 to="/register"
-                className="btn-tactile ripple px-3 py-1.5 text-sm font-medium rounded-xl gradient-brand text-primary-foreground shadow-md"
+                className="px-3 py-1.5 text-sm font-medium rounded bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
               >
                 Kreye Kont
               </Link>
