@@ -15,32 +15,35 @@ interface NovelCardProps {
 const NovelCard = ({ id, title, author, description, coverUrl, chapters, rating, genre }: NovelCardProps) => (
   <Link
     to={`/novel/${id}`}
-    className="group block rounded-xl border border-border bg-card overflow-hidden transition-all duration-300 hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-1"
+    className="group block transition-opacity hover:opacity-90"
   >
-    <div className="aspect-[3/4] relative overflow-hidden">
+    <div className="aspect-[2/3] relative overflow-hidden bg-secondary border border-border">
       {coverUrl ? (
-        <img src={coverUrl} alt={title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" />
+        <img
+          src={coverUrl}
+          alt={title}
+          className="w-full h-full object-cover"
+          loading="lazy"
+        />
       ) : (
-        <div className="w-full h-full gradient-brand flex flex-col items-center justify-center p-4 text-primary-foreground">
-          <BookOpen className="h-12 w-12 mb-3 opacity-60" />
-          <span className="text-xs font-semibold uppercase tracking-widest opacity-80">{genre}</span>
+        <div className="w-full h-full flex flex-col items-center justify-center p-3 text-muted-foreground">
+          <BookOpen className="h-8 w-8 mb-2 opacity-50" />
+          <span className="text-[10px] uppercase tracking-wider opacity-70">{genre}</span>
         </div>
       )}
-      <div className="absolute top-3 right-3 flex items-center gap-1 rounded-full bg-background/90 px-2 py-1 text-xs font-semibold text-foreground shadow-sm">
-        <Star className="h-3 w-3 fill-primary text-primary" />
+      <div className="absolute top-2 right-2 flex items-center gap-1 bg-background/95 px-1.5 py-0.5 text-[11px] text-foreground border border-border">
+        <Star className="h-2.5 w-2.5 fill-primary text-primary" />
         {rating}
       </div>
     </div>
-    <div className="p-3 sm:p-4">
-      <h3 className="font-serif font-bold text-foreground text-sm sm:text-lg leading-tight group-hover:text-primary transition-colors line-clamp-2">
+    <div className="pt-2">
+      <h3 className="font-medium text-foreground text-sm leading-snug line-clamp-2 group-hover:text-primary transition-colors">
         {title}
       </h3>
-      <p className="text-xs sm:text-sm text-muted-foreground mt-1">{author}</p>
-      <p className="text-xs text-muted-foreground mt-1 line-clamp-2 hidden sm:block">{description}</p>
-      <div className="mt-2 flex items-center gap-2">
-        <span className="text-xs font-medium text-primary">{chapters} chapit</span>
-        <span className="text-xs text-muted-foreground">• {genre}</span>
-      </div>
+      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{author}</p>
+      <p className="text-[11px] text-muted-foreground mt-1">
+        {chapters} chapit · {genre}
+      </p>
     </div>
   </Link>
 );
