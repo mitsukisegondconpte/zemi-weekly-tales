@@ -3,18 +3,20 @@ import Footer from "@/components/Footer";
 import BottomNav from "@/components/BottomNav";
 import NovelCard from "@/components/NovelCard";
 import HeroSlideshow from "@/components/HeroSlideshow";
-import { BookOpen, Coins, Users, ChevronRight, Star, TrendingUp, Flame, Sparkles } from "lucide-react";
+import { BookOpen, ChevronRight, Star, TrendingUp, Flame, Sparkles, Play } from "lucide-react";
 import { useState, useMemo } from "react";
 import { usePublishedNovels, GENRES } from "@/hooks/useNovels";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useContinueReading } from "@/hooks/useExtra";
 
 const ALL_GENRES = ["Tout", ...GENRES];
 
 const Index = () => {
   const [genre, setGenre] = useState("Tout");
   const { data: novels = [], isLoading } = usePublishedNovels();
+  const { data: continueReading = [] } = useContinueReading();
 
   // Chapter counts
   const { data: chapterCounts = {} } = useQuery({
@@ -55,6 +57,42 @@ const Index = () => {
 
         {/* Vertical sections */}
         <div className="container py-8 space-y-12">
+          {/* Continue Reading */}
+          {continueReading.length > 0 && (
+            <section>
+              <div className="flex items-end justify-between mb-3 border-b border-border pb-2">
+                <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
+                  <Play className="h-4 w-4 text-primary fill-primary" /> Kontinye Lekti
+                </h2>
+                <span className="text-xs text-muted-foreground">{continueReading.length}</span>
+              </div>
+              <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
+                {continueReading.map((cr: any) => (
+                  <Link
+                    key={cr.chapter_id}
+                    to={`/chapter/${cr.novel_id}/${cr.chapter_id}`}
+                    className="shrink-0 w-[140px] sm:w-[160px] group"
+                  >
+                    <div className="relative aspect-[2/3] rounded overflow-hidden bg-secondary border border-border">
+                      {cr.novel?.cover_url ? (
+                        <img src={cr.novel.cover_url} alt={cr.novel.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" loading="lazy" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <BookOpen className="h-8 w-8 text-muted-foreground" />
+                        </div>
+                      )}
+                      <div className="absolute inset-x-0 bottom-0 h-1 bg-black/30">
+                        <div className="h-full bg-primary" style={{ width: `${cr.scroll_pct || 5}%` }} />
+                      </div>
+                    </div>
+                    <p className="mt-2 text-xs font-medium text-foreground line-clamp-1">{cr.novel?.title}</p>
+                    <p className="text-[11px] text-muted-foreground">{cr.scroll_pct || 0}% li</p>
+                  </Link>
+                ))}
+              </div>
+            </section>
+          )}
+
           {sections.map(section => (
             section.items.length > 0 && (
               <section key={section.id}>

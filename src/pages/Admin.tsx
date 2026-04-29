@@ -12,6 +12,7 @@ import AdminAuthorReview from "@/components/AdminAuthorReview";
 import AdminChapterModeration from "@/components/AdminChapterModeration";
 
 const TABS = [
+  { id: "overview", label: "Apèsi", icon: BarChart3 },
   { id: "novels", label: "Novèl", icon: BookOpen },
   { id: "chapters", label: "Chapit", icon: FileText },
   { id: "authors", label: "Aplikasyon Otè", icon: UserCheck },

@@ -10,9 +10,11 @@ import {
   useMyNovels,
   useMyChapters,
 } from "@/hooks/useAuthor";
+import { useAuthorStats } from "@/hooks/useExtra";
 import {
   BookOpen, Plus, Edit, Eye, Clock, CheckCircle2, XCircle,
   Sparkles, BadgeCheck, Loader2, ArrowRight, Trash2, FileText,
+  MessageSquare, Coins, TrendingUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import NovelEditorModal from "@/components/author/NovelEditorModal";
@@ -46,6 +48,7 @@ const AuthorDashboard = () => {
   const isVerified = useIsVerifiedAuthor();
   const queryClient = useQueryClient();
   const { data: novels = [], isLoading: novelsLoading } = useMyNovels();
+  const { data: stats } = useAuthorStats(user?.id);
   const [selectedNovel, setSelectedNovel] = useState<string | undefined>();
   const { data: chapters = [], isLoading: chaptersLoading } = useMyChapters(selectedNovel);
 
@@ -149,21 +152,26 @@ const AuthorDashboard = () => {
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-3 gap-3 mb-6">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
             <div className="rounded-2xl border border-border bg-card p-4 text-center animate-pop-in">
               <BookOpen className="h-5 w-5 mx-auto text-primary mb-1" />
-              <p className="text-xl font-bold text-foreground">{novels.length}</p>
+              <p className="text-xl font-bold text-foreground">{stats?.total_novels ?? novels.length}</p>
               <p className="text-[11px] text-muted-foreground">Novèl</p>
             </div>
             <div className="rounded-2xl border border-border bg-card p-4 text-center animate-pop-in" style={{ animationDelay: "60ms" }}>
-              <CheckCircle2 className="h-5 w-5 mx-auto text-green-500 mb-1" />
-              <p className="text-xl font-bold text-foreground">{novels.filter((n: any) => n.status === "published").length}</p>
-              <p className="text-[11px] text-muted-foreground">Pibliye</p>
+              <FileText className="h-5 w-5 mx-auto text-primary mb-1" />
+              <p className="text-xl font-bold text-foreground">{stats?.total_published ?? 0}</p>
+              <p className="text-[11px] text-muted-foreground">Chapit pibliye</p>
             </div>
             <div className="rounded-2xl border border-border bg-card p-4 text-center animate-pop-in" style={{ animationDelay: "120ms" }}>
-              <Clock className="h-5 w-5 mx-auto text-orange-500 mb-1" />
-              <p className="text-xl font-bold text-foreground">{novels.filter((n: any) => n.status !== "published").length}</p>
-              <p className="text-[11px] text-muted-foreground">Bouyon</p>
+              <MessageSquare className="h-5 w-5 mx-auto text-primary mb-1" />
+              <p className="text-xl font-bold text-foreground">{stats?.total_comments ?? 0}</p>
+              <p className="text-[11px] text-muted-foreground">Kòmantè</p>
+            </div>
+            <div className="rounded-2xl border border-border bg-card p-4 text-center animate-pop-in" style={{ animationDelay: "180ms" }}>
+              <Coins className="h-5 w-5 mx-auto text-primary mb-1" />
+              <p className="text-xl font-bold text-foreground">{stats?.total_coins_earned ?? 0}</p>
+              <p className="text-[11px] text-muted-foreground">Coins ganye</p>
             </div>
           </div>
 

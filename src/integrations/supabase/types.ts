@@ -86,6 +86,33 @@ export type Database = {
         }
         Relationships: []
       }
+      chapter_progress: {
+        Row: {
+          chapter_id: string
+          id: string
+          novel_id: string
+          scroll_pct: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          chapter_id: string
+          id?: string
+          novel_id: string
+          scroll_pct?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          chapter_id?: string
+          id?: string
+          novel_id?: string
+          scroll_pct?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       chapters: {
         Row: {
           author_id: string | null
@@ -204,6 +231,27 @@ export type Database = {
           is_active?: boolean
           max_uses?: number
           used_count?: number
+        }
+        Relationships: []
+      }
+      comment_likes: {
+        Row: {
+          comment_id: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          comment_id: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          comment_id?: string
+          created_at?: string
+          id?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -457,6 +505,30 @@ export type Database = {
         }
         Relationships: []
       }
+      reader_settings: {
+        Row: {
+          font_size: number
+          line_height: number
+          theme: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          font_size?: number
+          line_height?: number
+          theme?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          font_size?: number
+          line_height?: number
+          theme?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       reading_history: {
         Row: {
           chapter_id: string
@@ -647,6 +719,29 @@ export type Database = {
       }
     }
     Functions: {
+      get_admin_overview: {
+        Args: never
+        Returns: {
+          new_users_7d: number
+          pending_applications: number
+          pending_chapters: number
+          total_comments: number
+          total_novels: number
+          total_users: number
+        }[]
+      }
+      get_author_stats: {
+        Args: { _author_id: string }
+        Returns: {
+          total_chapters: number
+          total_coins_earned: number
+          total_comments: number
+          total_novels: number
+          total_pending: number
+          total_published: number
+          total_unlocks: number
+        }[]
+      }
       get_chapter_content: {
         Args: { _chapter_id: string }
         Returns: {
@@ -659,6 +754,15 @@ export type Database = {
           novel_id: string
           status: string
           title: string
+        }[]
+      }
+      get_continue_reading: {
+        Args: { _limit?: number; _user_id: string }
+        Returns: {
+          chapter_id: string
+          novel_id: string
+          scroll_pct: number
+          updated_at: string
         }[]
       }
       has_role: {
