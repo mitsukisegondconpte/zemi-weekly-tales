@@ -154,7 +154,7 @@ const ChapterReader = () => {
     },
   });
 
-  // Realtime: live comments (TikTok / WebNovel style)
+  // Realtime: live comments
   useEffect(() => {
     if (!chapterId) return;
     const channel = supabase
@@ -167,6 +167,10 @@ const ChapterReader = () => {
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [chapterId, refetchComments]);
+
+  const commentIds = useMemo(() => comments.map((c: any) => c.id), [comments]);
+  const { data: likesData } = useCommentLikes(commentIds);
+  const toggleLike = useToggleCommentLike();
 
   const submitComment = async () => {
     if (!commentText.trim() || !user || !chapterId || !novelId) return;
@@ -526,7 +530,11 @@ const ChapterReader = () => {
 
             {/* Comment list */}
             <div className="space-y-3">
-              {comments.map((c: any, idx: number) => (
+              {comments.map((c: any, idx: number) => {
+                const liked = likesData?.mine.has(c.id) ?? false;
+                const likeCount = likesData?.counts[c.id] ?? 0;
+                const isOwn = user?.id === c.user_id;
+                return (
                 <div
                   key={c.id}
                   style={{ animationDelay: `${Math.min(idx, 8) * 60}ms` }}
@@ -543,9 +551,32 @@ const ChapterReader = () => {
                     <span className={`text-sm font-bold ${ts.text}`}>{(c as any).profiles?.display_name || "Anonim"}</span>
                     <span className={`text-xs ${ts.text} opacity-40`}>{new Date(c.created_at).toLocaleDateString()}</span>
                   </div>
-                  <p className={`text-sm ${ts.text} opacity-80 pl-10 animate-fade-in break-words whitespace-pre-wrap`}>{c.content}</p>
+                  <p className={`text-sm ${ts.text} opacity-80 pl-10 break-words whitespace-pre-wrap`}>{c.content}</p>
+                  <div className="pl-10 mt-2 flex items-center gap-3">
+                    <button
+                      onClick={() => toggleLike.mutate({ commentId: c.id, liked })}
+                      className={`inline-flex items-center gap-1 text-xs font-semibold transition-colors ${
+                        liked ? "text-primary" : `${ts.text} opacity-60 hover:opacity-100`
+                      }`}
+                    >
+                      <Heart className={`h-3.5 w-3.5 ${liked ? "fill-current" : ""}`} />
+                      <span>{likeCount}</span>
+                    </button>
+                    {isOwn && (
+                      <button
+                        onClick={async () => {
+                          await supabase.from("comments").delete().eq("id", c.id);
+                          refetchComments();
+                        }}
+                        className={`text-xs ${ts.text} opacity-40 hover:opacity-100 hover:text-destructive`}
+                      >
+                        Efase
+                      </button>
+                    )}
+                  </div>
                 </div>
-              ))}
+                );
+              })}
               {comments.length === 0 && (
                 <div className={`text-center py-10 ${ts.text} opacity-50 animate-fade-in`}>
                   <MessageSquare className="h-10 w-10 mx-auto mb-3 opacity-40 animate-float" />
