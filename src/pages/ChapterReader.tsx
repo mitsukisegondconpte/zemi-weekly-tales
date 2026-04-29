@@ -75,6 +75,15 @@ const ChapterReader = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  // Debounced save chapter_progress
+  useEffect(() => {
+    if (!user || !chapterId || !novelId) return;
+    const t = setTimeout(() => {
+      saveChapterProgress(user.id, novelId, chapterId, scrollProgress);
+    }, 1500);
+    return () => clearTimeout(t);
+  }, [scrollProgress, user, chapterId, novelId]);
+
   useEffect(() => {
     if (!user && !isLoading) {
       toast.error("Ou dwe konekte pou li.");
