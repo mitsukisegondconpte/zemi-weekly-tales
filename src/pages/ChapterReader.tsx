@@ -10,6 +10,8 @@ import { toast } from "sonner";
 import { useEffect, useCallback, useState, useMemo, useRef } from "react";
 import { Progress } from "@/components/ui/progress";
 import DOMPurify from "dompurify";
+import { saveChapterProgress, useCommentLikes, useToggleCommentLike } from "@/hooks/useExtra";
+import { Heart } from "lucide-react";
 
 type ReadingTheme = "light" | "dark" | "sepia";
 
