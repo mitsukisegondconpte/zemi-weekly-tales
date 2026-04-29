@@ -3,12 +3,13 @@ import Footer from "@/components/Footer";
 import BottomNav from "@/components/BottomNav";
 import NovelCard from "@/components/NovelCard";
 import HeroSlideshow from "@/components/HeroSlideshow";
-import { BookOpen, Coins, Users, ChevronRight, Star, TrendingUp, Flame, Sparkles } from "lucide-react";
+import { BookOpen, ChevronRight, Star, TrendingUp, Flame, Sparkles, Play } from "lucide-react";
 import { useState, useMemo } from "react";
 import { usePublishedNovels, GENRES } from "@/hooks/useNovels";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useContinueReading } from "@/hooks/useExtra";
 
 const ALL_GENRES = ["Tout", ...GENRES];
 
