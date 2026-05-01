@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Coins, Shield, LogOut, Bell, Moon, Sun } from "lucide-react";
+import { Coins, Shield, LogOut, Bell, Moon, Sun, Heart } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserNotifications, useUnreadCount, useMarkAllRead, useMarkNotificationRead, formatRelative } from "@/hooks/useAuthor";
@@ -58,6 +58,17 @@ const Header = () => {
         </Link>
 
         <nav className="flex items-center gap-4">
+          {user && (
+            <Link
+              to="/favorites"
+              className={`hidden sm:flex items-center gap-1.5 text-sm transition-colors hover:text-primary ${
+                location.pathname === "/favorites" ? "text-primary" : "text-muted-foreground"
+              }`}
+            >
+              <Heart className="h-4 w-4" />
+              <span>Favori</span>
+            </Link>
+          )}
           {isAdmin && (
             <Link
               to="/admin"

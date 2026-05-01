@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { Home, BookOpen, Search, LayoutGrid, User, Shield } from "lucide-react";
+import { Home, BookOpen, Search, Heart, User, Shield } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState } from "react";
 
@@ -7,7 +7,7 @@ const NAV_ITEMS = [
   { to: "/", label: "Home", icon: Home },
   { to: "/lecture", label: "Lekti", icon: BookOpen },
   { to: "/search", label: "Rechèch", icon: Search },
-  { to: "/canvas", label: "Canvas", icon: LayoutGrid },
+  { to: "/favorites", label: "Favori", icon: Heart },
   { to: "/profile", label: "Mwen", icon: User },
 ];
 
