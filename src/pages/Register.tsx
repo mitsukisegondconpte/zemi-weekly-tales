@@ -7,6 +7,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import zemiLogo from "@/assets/zemi-logo.jpg";
 
+const getPasswordStrength = (pw: string) => {
+  let score = 0;
+  if (pw.length >= 6) score++;
+  if (pw.length >= 10) score++;
+  if (/[A-Z]/.test(pw) && /[a-z]/.test(pw)) score++;
+  if (/\d/.test(pw)) score++;
+  if (/[^A-Za-z0-9]/.test(pw)) score++;
+  return score; // 0-5
+};
+const STRENGTH_LABELS = ["Twò fèb", "Fèb", "Mwayen", "Bon", "Solid", "Eksèlan"];
+const STRENGTH_COLORS = ["bg-destructive", "bg-destructive", "bg-yellow-500", "bg-yellow-500", "bg-green-500", "bg-green-600"];
+
 const Register = () => {
   const [showPw, setShowPw] = useState(false);
   const [name, setName] = useState("");
@@ -17,6 +29,7 @@ const Register = () => {
   const [shakeKey, setShakeKey] = useState(0);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const pwStrength = getPasswordStrength(password);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -148,6 +161,23 @@ const Register = () => {
                     {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
+                {password.length > 0 && (
+                  <div className="mt-2 space-y-1">
+                    <div className="flex gap-1">
+                      {[0, 1, 2, 3, 4].map((i) => (
+                        <div
+                          key={i}
+                          className={`h-1 flex-1 rounded-full transition-colors ${
+                            i < pwStrength ? STRENGTH_COLORS[pwStrength] : "bg-secondary"
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Fòs modpas: <span className="font-semibold text-foreground">{STRENGTH_LABELS[pwStrength]}</span>
+                    </p>
+                  </div>
+                )}
               </div>
               <button
                 type="submit"
