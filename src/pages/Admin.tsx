@@ -10,6 +10,8 @@ import ReactQuill from "react-quill-new";
 import "react-quill-new/dist/quill.snow.css";
 import AdminAuthorReview from "@/components/AdminAuthorReview";
 import AdminChapterModeration from "@/components/AdminChapterModeration";
+import { useAdminOverview } from "@/hooks/useExtra";
+import { Users, UserPlus, Hourglass, ShieldAlert } from "lucide-react";
 
 const TABS = [
   { id: "overview", label: "Apèsi", icon: BarChart3 },
@@ -61,7 +63,8 @@ const QUILL_MODULES = {
 };
 
 const Admin = () => {
-  const [tab, setTab] = useState("novels");
+  const [tab, setTab] = useState("overview");
+  const { data: overview } = useAdminOverview();
   const queryClient = useQueryClient();
   const [confirmAction, setConfirmAction] = useState<{ title: string; message: string; action: () => Promise<void>; destructive?: boolean } | null>(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
@@ -396,6 +399,56 @@ const Admin = () => {
               </button>
             ))}
           </div>
+
+          {/* ========== OVERVIEW TAB ========== */}
+          {tab === "overview" && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
+                {[
+                  { label: "Itilizatè total", value: overview?.total_users ?? 0, icon: Users, color: "text-primary" },
+                  { label: "Nouvo (7 jou)", value: overview?.new_users_7d ?? 0, icon: UserPlus, color: "text-green-600" },
+                  { label: "Novèl total", value: overview?.total_novels ?? 0, icon: BookOpen, color: "text-primary" },
+                  { label: "Aplikasyon an atant", value: overview?.pending_applications ?? 0, icon: Hourglass, color: "text-yellow-600" },
+                  { label: "Chapit an atant", value: overview?.pending_chapters ?? 0, icon: ShieldAlert, color: "text-orange-600" },
+                  { label: "Kòmantè total", value: overview?.total_comments ?? 0, icon: MessageSquare, color: "text-primary" },
+                ].map((s) => (
+                  <div key={s.label} className="rounded-xl border border-border bg-card p-4 md:p-5 shadow-sm">
+                    <div className="flex items-center justify-between mb-2">
+                      <s.icon className={`h-5 w-5 ${s.color}`} />
+                    </div>
+                    <p className="text-2xl md:text-3xl font-black text-foreground">{Number(s.value).toLocaleString()}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{s.label}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {[
+                  { label: "Aplikasyon Otè", to: "authors", icon: UserCheck, badge: overview?.pending_applications },
+                  { label: "Moderasyon Chapit", to: "moderation", icon: ShieldCheck, badge: overview?.pending_chapters },
+                  { label: "Kòmantè", to: "comments", icon: MessageSquare },
+                  { label: "Novèl", to: "novels", icon: BookOpen },
+                  { label: "Chapit", to: "chapters", icon: FileText },
+                  { label: "Kòd Coins", to: "codes", icon: Key },
+                ].map((q) => (
+                  <button key={q.to} onClick={() => setTab(q.to)}
+                    className="flex items-center justify-between p-4 rounded-xl border border-border bg-card hover:border-primary/40 hover:shadow-md active:scale-95 transition-all text-left">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <q.icon className="h-5 w-5 text-primary" />
+                      </div>
+                      <span className="font-bold text-foreground text-sm">{q.label}</span>
+                    </div>
+                    {!!q.badge && Number(q.badge) > 0 && (
+                      <span className="px-2 py-0.5 rounded-full bg-destructive text-destructive-foreground text-xs font-bold">
+                        {q.badge}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* ========== NOVELS TAB ========== */}
           {tab === "novels" && (
