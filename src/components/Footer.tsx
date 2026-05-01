@@ -14,6 +14,15 @@ const Footer = () => (
           </div>
         </Link>
 
+        <nav className="flex items-center gap-5 text-sm">
+          <Link to="/faq" className="text-muted-foreground hover:text-primary transition-colors font-medium">
+            FAQ
+          </Link>
+          <Link to="/privacy" className="text-muted-foreground hover:text-primary transition-colors font-medium">
+            Konfidansyalite
+          </Link>
+        </nav>
+
         <div className="flex items-center gap-4">
           <a
             href="https://www.instagram.com/zemi_chak_semen?igsh=ajZmYWlycTFrdGkx"
