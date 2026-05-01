@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { useEffect, useCallback, useState, useMemo, useRef } from "react";
 import { Progress } from "@/components/ui/progress";
 import DOMPurify from "dompurify";
-import { saveChapterProgress, useCommentLikes, useToggleCommentLike, useReaderSettings } from "@/hooks/useExtra";
+import { saveChapterProgress, useCommentLikes, useToggleCommentLike } from "@/hooks/useExtra";
 import { Heart } from "lucide-react";
 
 type ReadingTheme = "light" | "dark" | "sepia";
@@ -39,21 +39,19 @@ const ChapterReader = () => {
   const [submittingComment, setSubmittingComment] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
 
-  const { settings, setSettings } = useReaderSettings();
-  const theme = settings.theme;
-  const fontSize = settings.font_size;
-  const setTheme = (t: ReadingTheme) => setSettings({ theme: t });
-  const setFontSize = (updater: number | ((f: number) => number)) => {
-    const next = typeof updater === "function" ? (updater as any)(fontSize) : updater;
-    setSettings({ font_size: Math.max(14, Math.min(28, next)) });
-  };
+  const [theme, setTheme] = useState<ReadingTheme>(() =>
+    (localStorage.getItem("reading-theme") as ReadingTheme) || "light"
+  );
+  const [fontSize, setFontSize] = useState(() => parseInt(localStorage.getItem("reading-font-size") || "18"));
   const [maxWidth, setMaxWidth] = useState(() => parseInt(localStorage.getItem("reading-max-width") || "720"));
   const [currentPage, setCurrentPage] = useState(0);
   const [scrollProgress, setScrollProgress] = useState(0);
 
   useEffect(() => {
+    localStorage.setItem("reading-theme", theme);
+    localStorage.setItem("reading-font-size", String(fontSize));
     localStorage.setItem("reading-max-width", String(maxWidth));
-  }, [maxWidth]);
+  }, [theme, fontSize, maxWidth]);
 
   useEffect(() => {
     if (chapterId) {

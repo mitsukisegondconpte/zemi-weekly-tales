@@ -1,71 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { useEffect, useState, useRef } from "react";
+import { useEffect } from "react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
-
-// ============= READER SETTINGS (localStorage + DB sync) =============
-export type ReaderTheme = "light" | "dark" | "sepia";
-export interface ReaderSettings {
-  theme: ReaderTheme;
-  font_size: number;
-  line_height: number;
-}
-const DEFAULT_SETTINGS: ReaderSettings = { theme: "light", font_size: 18, line_height: 1.7 };
-const LS_KEY = "reader-settings";
-
-export const useReaderSettings = () => {
-  const { user } = useAuth();
-  const [settings, setSettingsState] = useState<ReaderSettings>(() => {
-    try {
-      const raw = localStorage.getItem(LS_KEY);
-      if (raw) return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) };
-    } catch {}
-    return DEFAULT_SETTINGS;
-  });
-  const saveTimer = useRef<number | null>(null);
-
-  // Hydrate from DB on login
-  useEffect(() => {
-    if (!user) return;
-    (async () => {
-      const { data } = await supabase
-        .from("reader_settings")
-        .select("theme, font_size, line_height")
-        .eq("user_id", user.id)
-        .maybeSingle();
-      if (data) {
-        const merged: ReaderSettings = {
-          theme: (data.theme as ReaderTheme) || "light",
-          font_size: data.font_size ?? 18,
-          line_height: Number(data.line_height ?? 1.7),
-        };
-        setSettingsState(merged);
-        localStorage.setItem(LS_KEY, JSON.stringify(merged));
-      }
-    })();
-  }, [user]);
-
-  const setSettings = (patch: Partial<ReaderSettings>) => {
-    setSettingsState((prev) => {
-      const next = { ...prev, ...patch };
-      localStorage.setItem(LS_KEY, JSON.stringify(next));
-      if (user) {
-        if (saveTimer.current) window.clearTimeout(saveTimer.current);
-        saveTimer.current = window.setTimeout(async () => {
-          await supabase.from("reader_settings").upsert(
-            { user_id: user.id, ...next, updated_at: new Date().toISOString() },
-            { onConflict: "user_id" }
-          );
-        }, 800);
-      }
-      return next;
-    });
-  };
-
-  return { settings, setSettings };
-};
 
 // ============= AUTHOR STATS =============
 export const useAuthorStats = (authorId: string | undefined) => {
