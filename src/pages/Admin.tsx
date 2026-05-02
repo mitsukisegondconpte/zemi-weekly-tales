@@ -10,8 +10,9 @@ import ReactQuill from "react-quill-new";
 import "react-quill-new/dist/quill.snow.css";
 import AdminAuthorReview from "@/components/AdminAuthorReview";
 import AdminChapterModeration from "@/components/AdminChapterModeration";
+import AdminWarnAuthorDialog from "@/components/AdminWarnAuthorDialog";
 import { useAdminOverview } from "@/hooks/useExtra";
-import { Users, UserPlus, Hourglass, ShieldAlert } from "lucide-react";
+import { Users, UserPlus, Hourglass, ShieldAlert, Bell, Ban } from "lucide-react";
 
 const TABS = [
   { id: "overview", label: "Apèsi", icon: BarChart3 },
@@ -69,6 +70,7 @@ const Admin = () => {
   const [confirmAction, setConfirmAction] = useState<{ title: string; message: string; action: () => Promise<void>; destructive?: boolean } | null>(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
   const quillRef = useRef<any>(null);
+  const [warnTarget, setWarnTarget] = useState<{ authorId: string; name?: string; context?: string; link?: string } | null>(null);
 
   const withConfirm = (title: string, message: string, action: () => Promise<void>, destructive = false) => {
     setConfirmAction({ title, message, action, destructive });
@@ -529,17 +531,51 @@ const Admin = () => {
                           {n.status === "published" ? "Pibliye" : "Bouyon"}
                         </span>
                       </div>
-                      <div className="flex gap-2 mt-3">
+                      <div className="flex flex-wrap gap-2 mt-3">
                         <button onClick={() => toggleNovelStatus(n.id, n.status)}
-                          className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-sm font-bold active:scale-95 ${
+                          className={`flex-1 min-w-[110px] flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-sm font-bold active:scale-95 ${
                             n.status === "published" ? "bg-secondary text-secondary-foreground" : "gradient-brand text-primary-foreground shadow-md"
                           }`}>
                           {n.status === "published" ? <><EyeOff className="h-4 w-4" /> Retire</> : <><Eye className="h-4 w-4" /> Pibliye</>}
                         </button>
                         <button onClick={() => { setEditingNovel(n.id); setNovelForm({ title: n.title, author: n.author, description: n.description || "", genre: n.genre, scheduled_at: "" }); setShowNovelForm(true); }}
-                          className="px-3 py-2.5 rounded-xl bg-secondary text-secondary-foreground active:scale-95"><Edit className="h-4 w-4" /></button>
+                          className="px-3 py-2.5 rounded-xl bg-secondary text-secondary-foreground active:scale-95" title="Modifye"><Edit className="h-4 w-4" /></button>
+                        {n.author_id && (
+                          <button
+                            onClick={() => setWarnTarget({ authorId: n.author_id, name: n.author, context: `Novèl: ${n.title}`, link: `/novel/${n.id}` })}
+                            className="px-3 py-2.5 rounded-xl bg-orange-500/10 text-orange-600 dark:text-orange-400 active:scale-95"
+                            title="Avèti otè"
+                          >
+                            <Bell className="h-4 w-4" />
+                          </button>
+                        )}
+                        <button
+                          onClick={() => withConfirm(
+                            "Diskalifye Novèl",
+                            `Mete novèl "${n.title}" an bouyon epi voye yon notifikasyon bay otè a?`,
+                            async () => {
+                              await supabase.from("novels").update({ status: "draft" }).eq("id", n.id);
+                              if (n.author_id) {
+                                await supabase.from("user_notifications").insert({
+                                  user_id: n.author_id,
+                                  title: "Novèl diskalifye",
+                                  message: `Novèl ou "${n.title}" te retire pa admin yo. Tanpri kontakte sipò pou plis detay.`,
+                                  type: "warning",
+                                  link: `/novel/${n.id}`,
+                                });
+                              }
+                              queryClient.invalidateQueries({ queryKey: ["novels"] });
+                              toast.success("Novèl diskalifye");
+                            },
+                            true
+                          )}
+                          className="px-3 py-2.5 rounded-xl bg-destructive/10 text-destructive active:scale-95"
+                          title="Diskalifye"
+                        >
+                          <Ban className="h-4 w-4" />
+                        </button>
                         <button onClick={() => deleteNovel(n.id)}
-                          className="px-3 py-2.5 rounded-xl bg-destructive/10 text-destructive active:scale-95"><Trash2 className="h-4 w-4" /></button>
+                          className="px-3 py-2.5 rounded-xl bg-destructive/10 text-destructive active:scale-95" title="Efase"><Trash2 className="h-4 w-4" /></button>
                       </div>
                     </div>
                   ))}
@@ -850,6 +886,16 @@ const Admin = () => {
       {confirmAction && (
         <ConfirmDialog title={confirmAction.title} message={confirmAction.message} destructive={confirmAction.destructive}
           onConfirm={handleConfirm} onCancel={() => setConfirmAction(null)} loading={confirmLoading} />
+      )}
+      {warnTarget && (
+        <AdminWarnAuthorDialog
+          open={!!warnTarget}
+          onOpenChange={(o) => !o && setWarnTarget(null)}
+          authorId={warnTarget.authorId}
+          authorName={warnTarget.name}
+          contextLabel={warnTarget.context}
+          link={warnTarget.link}
+        />
       )}
     </div>
   );
