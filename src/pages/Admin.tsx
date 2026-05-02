@@ -887,6 +887,16 @@ const Admin = () => {
         <ConfirmDialog title={confirmAction.title} message={confirmAction.message} destructive={confirmAction.destructive}
           onConfirm={handleConfirm} onCancel={() => setConfirmAction(null)} loading={confirmLoading} />
       )}
+      {warnTarget && (
+        <AdminWarnAuthorDialog
+          open={!!warnTarget}
+          onOpenChange={(o) => !o && setWarnTarget(null)}
+          authorId={warnTarget.authorId}
+          authorName={warnTarget.name}
+          contextLabel={warnTarget.context}
+          link={warnTarget.link}
+        />
+      )}
     </div>
   );
 };
