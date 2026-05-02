@@ -5,9 +5,10 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { FileCheck, Check, X, Eye, Clock, Loader2 } from "lucide-react";
+import { FileCheck, Check, X, Eye, Clock, Loader2, Bell } from "lucide-react";
 import { formatRelative } from "@/hooks/useAuthor";
 import DOMPurify from "dompurify";
+import AdminWarnAuthorDialog from "@/components/AdminWarnAuthorDialog";
 
 const REJECT_REASONS = [
   "Kontni inapwopriye",
@@ -24,6 +25,7 @@ const AdminChapterModeration = () => {
   const [rejectReason, setRejectReason] = useState(REJECT_REASONS[0]);
   const [customReason, setCustomReason] = useState("");
   const [busy, setBusy] = useState(false);
+  const [warnTarget, setWarnTarget] = useState<{ authorId: string; name?: string; context?: string } | null>(null);
 
   const { data: pendingChapters = [], isLoading } = useQuery({
     queryKey: ["admin_pending_chapters"],
@@ -145,10 +147,30 @@ const AdminChapterModeration = () => {
                 >
                   <X className="h-4 w-4 mr-1.5" /> Refize
                 </Button>
+                {c.author_id && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setWarnTarget({ authorId: c.author_id, name: c.author_name, context: `Chapit: ${c.title}` })}
+                    className="btn-tactile border-orange-500/40 text-orange-600 hover:bg-orange-500/10"
+                  >
+                    <Bell className="h-4 w-4 mr-1.5" /> Avèti
+                  </Button>
+                )}
               </div>
             </div>
           ))}
         </div>
+      )}
+
+      {warnTarget && (
+        <AdminWarnAuthorDialog
+          open={!!warnTarget}
+          onOpenChange={(o) => !o && setWarnTarget(null)}
+          authorId={warnTarget.authorId}
+          authorName={warnTarget.name}
+          contextLabel={warnTarget.context}
+        />
       )}
 
       {/* Preview Dialog */}
