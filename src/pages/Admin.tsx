@@ -10,8 +10,9 @@ import ReactQuill from "react-quill-new";
 import "react-quill-new/dist/quill.snow.css";
 import AdminAuthorReview from "@/components/AdminAuthorReview";
 import AdminChapterModeration from "@/components/AdminChapterModeration";
+import AdminWarnAuthorDialog from "@/components/AdminWarnAuthorDialog";
 import { useAdminOverview } from "@/hooks/useExtra";
-import { Users, UserPlus, Hourglass, ShieldAlert } from "lucide-react";
+import { Users, UserPlus, Hourglass, ShieldAlert, Bell, Ban } from "lucide-react";
 
 const TABS = [
   { id: "overview", label: "Apèsi", icon: BarChart3 },
@@ -69,6 +70,7 @@ const Admin = () => {
   const [confirmAction, setConfirmAction] = useState<{ title: string; message: string; action: () => Promise<void>; destructive?: boolean } | null>(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
   const quillRef = useRef<any>(null);
+  const [warnTarget, setWarnTarget] = useState<{ authorId: string; name?: string; context?: string; link?: string } | null>(null);
 
   const withConfirm = (title: string, message: string, action: () => Promise<void>, destructive = false) => {
     setConfirmAction({ title, message, action, destructive });
