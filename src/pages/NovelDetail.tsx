@@ -312,6 +312,9 @@ const NovelDetail = () => {
                       <span className="font-medium text-foreground text-sm">{ch.title}</span>
                     </div>
                     <div className="flex items-center gap-2">
+                      {downloadedIds.has(ch.id) && (
+                        <Download className="h-3.5 w-3.5 text-primary" aria-label="Telechaje" />
+                      )}
                       {ch.is_premium && ch.coin_price > 0 ? (
                         unlocked ? (
                           <span className="text-xs font-semibold text-primary bg-primary/10 rounded-full px-3 py-1">DEBLOKE</span>
