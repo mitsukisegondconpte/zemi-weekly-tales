@@ -18,6 +18,9 @@ const Footer = () => (
           <Link to="/faq" className="text-muted-foreground hover:text-primary transition-colors font-medium">
             FAQ
           </Link>
+          <Link to="/offline" className="text-muted-foreground hover:text-primary transition-colors font-medium">
+            Offline
+          </Link>
           <Link to="/privacy" className="text-muted-foreground hover:text-primary transition-colors font-medium">
             Konfidansyalite
           </Link>
