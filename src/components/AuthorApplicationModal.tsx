@@ -51,10 +51,14 @@ const AuthorApplicationModal = ({ open, onOpenChange }: Props) => {
       setAcceptTos(false);
       onOpenChange(false);
     } catch (err: any) {
-      const msg = err?.message ?? "";
+      const msg = err?.message ?? String(err);
+      console.error("[AuthorApplication] submit error:", err);
       if (msg.includes("Already")) toast.error("Ou deja yon otè!");
-      else if (msg.includes("pending")) toast.error("Aplikasyon w deja ap tann");
-      else toast.error("Yon erè rive. Eseye ankò.");
+      else if (msg.includes("pending")) toast.error("Aplikasyon w deja ap tann revizyon");
+      else if (msg.includes("Not authenticated")) toast.error("Konekte avan ou aplike");
+      else if (msg.includes("Bio must")) toast.error("Bio dwe ant 10 ak 200 karaktè");
+      else if (msg.includes("Motivation must")) toast.error("Motivasyon dwe gen omwen 20 karaktè");
+      else toast.error(`Erè: ${msg || "eseye ankò"}`);
     }
   };
 
