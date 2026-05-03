@@ -21,6 +21,7 @@ import AuthorDashboard from "./pages/AuthorDashboard";
 import Favorites from "./pages/Favorites";
 import Privacy from "./pages/Privacy";
 import FAQ from "./pages/FAQ";
+import Offline from "./pages/Offline";
 import NotFound from "./pages/NotFound";
 import { useRealtimeNotifications } from "@/hooks/useExtra";
 
@@ -53,6 +54,7 @@ const App = () => (
             <Route path="/favorites" element={<ProtectedRoute><Favorites /></ProtectedRoute>} />
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/faq" element={<FAQ />} />
+            <Route path="/offline" element={<ProtectedRoute><Offline /></ProtectedRoute>} />
             <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
             <Route path="/author/dashboard" element={<ProtectedRoute><AuthorDashboard /></ProtectedRoute>} />
             <Route path="/admin" element={<ProtectedRoute adminOnly><Admin /></ProtectedRoute>} />
