@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { getChapterOffline } from "@/lib/offlineStore";
 
 export interface Novel {
   id: string;
@@ -77,12 +78,23 @@ export const useChapter = (chapterId: string | undefined) =>
     queryKey: ["chapter", chapterId],
     enabled: !!chapterId,
     queryFn: async () => {
-      // Use secure RPC that gates premium content behind unlock check
-      const { data, error } = await supabase
-        .rpc("get_chapter_content", { _chapter_id: chapterId! });
-      if (error) throw error;
-      if (!data || data.length === 0) throw new Error("Chapter not found");
-      return data[0] as Chapter;
+      // Try offline first if user is offline, fallback to network
+      if (typeof navigator !== "undefined" && !navigator.onLine) {
+        const offline = await getChapterOffline(chapterId!);
+        if (offline) return offline as Chapter;
+      }
+      try {
+        const { data, error } = await supabase
+          .rpc("get_chapter_content", { _chapter_id: chapterId! });
+        if (error) throw error;
+        if (!data || data.length === 0) throw new Error("Chapter not found");
+        return data[0] as Chapter;
+      } catch (err) {
+        // Network failed — try offline cache
+        const offline = await getChapterOffline(chapterId!);
+        if (offline) return offline as Chapter;
+        throw err;
+      }
     },
   });
 
