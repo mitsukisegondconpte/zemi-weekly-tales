@@ -2,13 +2,14 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import BottomNav from "@/components/BottomNav";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { BookOpen, Coins, Lock, ChevronLeft, Heart, Star } from "lucide-react";
+import { BookOpen, Coins, Lock, ChevronLeft, Heart, Star, Download, Trash2, CheckCircle2 } from "lucide-react";
 import { useNovel, useChapters } from "@/hooks/useNovels";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { useDownloadedChapters, downloadChapters, removeNovelDownload } from "@/hooks/useOffline";
 
 const NovelDetail = () => {
   const { id } = useParams();
@@ -21,6 +22,9 @@ const NovelDetail = () => {
   const [pendingChapter, setPendingChapter] = useState<any>(null);
   const [unlocking, setUnlocking] = useState(false);
   const [hoverRating, setHoverRating] = useState(0);
+  const { ids: downloadedIds, refresh: refreshDownloads } = useDownloadedChapters(id);
+  const [downloading, setDownloading] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState({ done: 0, total: 0 });
 
   // Unlocked chapters
   const { data: unlockedIds = [] } = useQuery({
