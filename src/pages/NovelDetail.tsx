@@ -226,6 +226,71 @@ const NovelDetail = () => {
           </div>
 
           <h2 className="text-xl font-bold font-serif text-foreground mb-3">Chapit yo</h2>
+
+          {user && chapters.length > 0 && (
+            <div className="mb-4 p-3 rounded-xl border border-border bg-card flex items-center justify-between gap-3 flex-wrap">
+              <div className="flex items-center gap-2 text-sm">
+                <Download className="h-4 w-4 text-primary" />
+                <span className="text-foreground font-medium">
+                  Telechaje pou li offline
+                </span>
+                <span className="text-muted-foreground text-xs">
+                  ({downloadedIds.size}/{chapters.length})
+                </span>
+              </div>
+              <div className="flex gap-2">
+                {downloadedIds.size > 0 && (
+                  <button
+                    onClick={async () => {
+                      await removeNovelDownload(id!);
+                      refreshDownloads();
+                    }}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-border text-xs font-medium text-foreground hover:border-destructive hover:text-destructive"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" /> Efase
+                  </button>
+                )}
+                <button
+                  disabled={downloading}
+                  onClick={async () => {
+                    setDownloading(true);
+                    setDownloadProgress({ done: 0, total: chapters.length });
+                    try {
+                      const toDownload = chapters
+                        .filter(c => !downloadedIds.has(c.id))
+                        .map(c => c.id);
+                      if (toDownload.length === 0) {
+                        toast.info("Tout chapit yo deja telechaje");
+                      } else {
+                        const res = await downloadChapters(id!, toDownload, (done, total) =>
+                          setDownloadProgress({ done, total })
+                        );
+                        if (res.skipped > 0) {
+                          toast.warning(`${res.done} telechaje, ${res.skipped} sote (premium ki pa debloke)`);
+                        } else {
+                          toast.success(`${res.done} chapit telechaje pou offline!`);
+                        }
+                        refreshDownloads();
+                      }
+                    } catch (e: any) {
+                      toast.error("Erè pandan telechajman");
+                    } finally {
+                      setDownloading(false);
+                    }
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg gradient-brand text-primary-foreground text-xs font-bold shadow disabled:opacity-60"
+                >
+                  {downloading ? (
+                    <>Telechaje... {downloadProgress.done}/{downloadProgress.total}</>
+                  ) : downloadedIds.size === chapters.length ? (
+                    <><CheckCircle2 className="h-3.5 w-3.5" /> Tout telechaje</>
+                  ) : (
+                    <><Download className="h-3.5 w-3.5" /> Telechaje tout</>
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
           {!user && (
             <div className="mb-4 p-4 rounded-xl border border-primary/30 bg-primary/5 text-center">
               <p className="text-sm text-foreground font-medium">Ou dwe <Link to="/login" className="text-primary font-bold hover:underline">konekte</Link> oswa <Link to="/register" className="text-primary font-bold hover:underline">kreye yon kont</Link> pou li novèl sa a.</p>
