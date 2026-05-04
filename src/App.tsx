@@ -67,7 +67,7 @@ const App = () => (
             <Route path="/faq" element={<FAQ />} />
             <Route path="/offline" element={<ProtectedRoute><Offline /></ProtectedRoute>} />
             <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
-            <Route path="/author/dashboard" element={<ProtectedRoute><AuthorDashboard /></ProtectedRoute>} />
+            <Route path="/author/dashboard" element={<ProtectedRoute authorOnly><AuthorDashboard /></ProtectedRoute>} />
             <Route path="/admin" element={<ProtectedRoute adminOnly><Admin /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
