@@ -88,7 +88,7 @@ const NovelEditorModal = ({ open, onOpenChange, novel }: Props) => {
         if (cover_url) updateData.cover_url = cover_url;
         const { error } = await supabase.from("novels").update(updateData).eq("id", novel.id);
         if (error) {
-          toast.error(error.message);
+          toast.error(error.message.includes("duplicate") ? "Ou gen deja yon novèl ak menm tit la." : error.message);
           return;
         }
         toast.success("Novèl modifye!");
@@ -105,7 +105,7 @@ const NovelEditorModal = ({ open, onOpenChange, novel }: Props) => {
         if (cover_url) insertData.cover_url = cover_url;
         const { error } = await supabase.from("novels").insert(insertData);
         if (error) {
-          toast.error(error.message);
+          toast.error(error.message.includes("duplicate") ? "Ou gen deja yon novèl ak menm tit la." : error.message);
           return;
         }
         toast.success("Novèl kreye!");
