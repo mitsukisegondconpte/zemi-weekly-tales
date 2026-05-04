@@ -309,7 +309,16 @@ const ChapterEditorModal = ({ open, onOpenChange, novelId, chapter, nextChapterN
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-sm font-semibold">Kontni *</Label>
+            <Label className="text-sm font-semibold flex items-center justify-between">
+              <span>Kontni *</span>
+              <span className={`text-[11px] font-normal ${
+                plainLen < MIN_LEN ? "text-orange-600" :
+                plainLen > MAX_LEN ? "text-destructive" : "text-muted-foreground"
+              }`}>
+                {plainLen.toLocaleString()} / {MAX_LEN.toLocaleString()} karaktè
+                {plainLen < MIN_LEN && ` (minimòm ${MIN_LEN})`}
+              </span>
+            </Label>
             <div className="rounded-lg border border-border overflow-hidden bg-background">
               <ReactQuill
                 ref={quillRef}
