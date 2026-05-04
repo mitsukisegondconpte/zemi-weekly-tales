@@ -263,13 +263,18 @@ const ChapterEditorModal = ({ open, onOpenChange, novelId, chapter, nextChapterN
         <div className="space-y-4 mt-2">
           <div className="grid grid-cols-3 gap-3">
             <div className="col-span-2 space-y-1.5">
-              <Label htmlFor="c-title" className="text-sm font-semibold">Tit *</Label>
+              <Label htmlFor="c-title" className="text-sm font-semibold flex items-center justify-between">
+                <span>Tit *</span>
+                <span className={`text-[10px] font-normal ${form.title.length > TITLE_MAX ? "text-destructive" : "text-muted-foreground"}`}>
+                  {form.title.length}/{TITLE_MAX}
+                </span>
+              </Label>
               <Input
                 id="c-title"
                 value={form.title}
                 onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
                 placeholder="Tit chapit la"
-                maxLength={140}
+                maxLength={TITLE_MAX}
               />
             </div>
             <div className="space-y-1.5">
