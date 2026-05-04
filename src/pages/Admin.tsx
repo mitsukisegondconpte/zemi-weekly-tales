@@ -864,23 +864,8 @@ const Admin = () => {
             </div>
           )}
 
-          {/* ========== STATS TAB ========== */}
-          {tab === "stats" && (
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
-              {[
-                { label: "Total Novèl", value: novels.length, icon: BookOpen },
-                { label: "Novèl Pibliye", value: novels.filter(n => n.status === "published").length, icon: Eye },
-                { label: "Total Reyaksyon", value: novels.reduce((s, n) => s + n.reactions, 0), icon: FileText },
-                { label: "Bouyon", value: novels.filter(n => n.status === "draft").length, icon: EyeOff },
-              ].map((s) => (
-                <div key={s.label} className="rounded-xl border border-border bg-card p-5 text-center">
-                  <s.icon className="h-6 w-6 text-primary mx-auto mb-2" />
-                  <p className="text-2xl md:text-3xl font-bold text-foreground">{s.value}</p>
-                  <p className="text-xs text-muted-foreground mt-1">{s.label}</p>
-                </div>
-              ))}
-            </div>
-          )}
+          {/* ========== LOGS TAB ========== */}
+          {tab === "logs" && <AdminLogs />}
         </div>
       </main>
       <Footer />
