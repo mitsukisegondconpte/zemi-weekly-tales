@@ -135,13 +135,18 @@ const NovelEditorModal = ({ open, onOpenChange, novel }: Props) => {
 
         <div className="space-y-4 mt-2">
           <div className="space-y-1.5">
-            <Label htmlFor="n-title" className="text-sm font-semibold">Tit *</Label>
+            <Label htmlFor="n-title" className="text-sm font-semibold flex items-center justify-between">
+              <span>Tit *</span>
+              <span className={`text-[10px] font-normal ${form.title.length > 100 ? "text-destructive" : "text-muted-foreground"}`}>
+                {form.title.length}/100
+              </span>
+            </Label>
             <Input
               id="n-title"
               value={form.title}
               onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
               placeholder="Tit novèl la"
-              maxLength={120}
+              maxLength={100}
             />
           </div>
 
