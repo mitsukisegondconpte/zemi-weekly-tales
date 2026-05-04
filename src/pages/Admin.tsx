@@ -11,8 +11,9 @@ import "react-quill-new/dist/quill.snow.css";
 import AdminAuthorReview from "@/components/AdminAuthorReview";
 import AdminChapterModeration from "@/components/AdminChapterModeration";
 import AdminWarnAuthorDialog from "@/components/AdminWarnAuthorDialog";
+import AdminLogs from "@/components/AdminLogs";
 import { useAdminOverview } from "@/hooks/useExtra";
-import { Users, UserPlus, Hourglass, ShieldAlert, Bell, Ban } from "lucide-react";
+import { Users, UserPlus, Hourglass, ShieldAlert, Bell, Ban, ScrollText } from "lucide-react";
 
 const TABS = [
   { id: "overview", label: "Apèsi", icon: BarChart3 },
@@ -20,9 +21,9 @@ const TABS = [
   { id: "chapters", label: "Chapit", icon: FileText },
   { id: "authors", label: "Aplikasyon Otè", icon: UserCheck },
   { id: "moderation", label: "Moderasyon", icon: ShieldCheck },
+  { id: "logs", label: "Jounal", icon: ScrollText },
   { id: "codes", label: "Kòd Coins", icon: Key },
   { id: "comments", label: "Kòmantè", icon: MessageSquare },
-  { id: "stats", label: "Statistik", icon: BarChart3 },
 ];
 
 const ConfirmDialog = ({ title, message, onConfirm, onCancel, destructive = false, loading = false }: {
