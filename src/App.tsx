@@ -25,7 +25,18 @@ import Offline from "./pages/Offline";
 import NotFound from "./pages/NotFound";
 import { useRealtimeNotifications } from "@/hooks/useExtra";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 60_000,
+      gcTime: 5 * 60_000,
+      retry: 2,
+      retryDelay: (i) => Math.min(1000 * 2 ** i, 8000),
+      refetchOnWindowFocus: false,
+    },
+    mutations: { retry: 1 },
+  },
+});
 
 const RealtimeBootstrap = () => {
   useRealtimeNotifications();

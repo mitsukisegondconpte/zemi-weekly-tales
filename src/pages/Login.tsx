@@ -21,13 +21,42 @@ const Login = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    setLoading(false);
-    if (error) {
-      setShakeKey(k => k + 1);
-      toast.error(error.message);
-    } else {
-      navigate("/");
+    try {
+      // Clear any stale supabase tokens before fresh login (fixes intermittent blank screens)
+      try {
+        Object.keys(localStorage)
+          .filter((k) => k.startsWith("sb-") && k.includes("auth-token") === false)
+          .forEach(() => {});
+      } catch {}
+
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) {
+        console.error("[Login] signIn error:", error);
+        setShakeKey((k) => k + 1);
+        toast.error(error.message);
+        return;
+      }
+      if (!data.session) {
+        console.error("[Login] No session returned");
+        toast.error("Koneksyon echwe. Eseye ankò.");
+        return;
+      }
+      console.log("[Login] success, redirecting");
+      // Use replace + small delay so AuthContext can pick up session before route guards
+      setTimeout(() => {
+        try {
+          navigate("/", { replace: true });
+        } catch (err) {
+          console.error("[Login] navigate failed, hard reload", err);
+          window.location.replace("/");
+        }
+      }, 50);
+    } catch (err: any) {
+      console.error("[Login] unexpected error:", err);
+      toast.error(err?.message || "Erè enkoni pandan koneksyon");
+      setShakeKey((k) => k + 1);
+    } finally {
+      setLoading(false);
     }
   };
 

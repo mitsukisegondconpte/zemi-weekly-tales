@@ -32,20 +32,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [profile, setProfile] = useState<{ display_name: string | null; coins: number } | null>(null);
 
   const fetchProfile = async (userId: string) => {
-    const { data } = await supabase
-      .from("profiles")
-      .select("display_name, coins")
-      .eq("user_id", userId)
-      .single();
-    if (data) setProfile(data);
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("display_name, coins")
+        .eq("user_id", userId)
+        .maybeSingle();
+      if (error) console.error("[Auth] fetchProfile error:", error);
+      if (data) setProfile(data);
+    } catch (err) {
+      console.error("[Auth] fetchProfile threw:", err);
+    }
   };
 
   const fetchRole = async (userId: string) => {
-    const { data } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", userId);
-    setIsAdmin((data ?? []).some((r) => r.role === "admin"));
+    try {
+      const { data, error } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId);
+      if (error) console.error("[Auth] fetchRole error:", error);
+      setIsAdmin((data ?? []).some((r) => r.role === "admin"));
+    } catch (err) {
+      console.error("[Auth] fetchRole threw:", err);
+    }
   };
 
   useEffect(() => {
@@ -82,7 +92,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    try {
+      await supabase.auth.signOut();
+    } catch (err) {
+      console.error("[Auth] signOut error:", err);
+    } finally {
+      // Clear cached supabase tokens to avoid intermittent blank-page on next login
+      try {
+        Object.keys(localStorage)
+          .filter((k) => k.startsWith("sb-") || k.startsWith("supabase"))
+          .forEach((k) => localStorage.removeItem(k));
+      } catch {}
+      setUser(null);
+      setSession(null);
+      setProfile(null);
+      setIsAdmin(false);
+    }
   };
 
   const refreshProfile = async () => {
