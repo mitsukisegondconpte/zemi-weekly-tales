@@ -565,7 +565,15 @@ const Admin = () => {
                                   link: `/novel/${n.id}`,
                                 });
                               }
+                              await supabase.rpc("log_admin_action", {
+                                _action: "novel_disqualified",
+                                _target_type: "novel",
+                                _target_id: n.id,
+                                _target_label: n.title,
+                                _reason: "Diskalifye pa admin",
+                              });
                               queryClient.invalidateQueries({ queryKey: ["novels"] });
+                              queryClient.invalidateQueries({ queryKey: ["admin_logs"] });
                               toast.success("Novèl diskalifye");
                             },
                             true
