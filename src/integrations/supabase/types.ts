@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_logs: {
+        Row: {
+          action: string
+          admin_id: string
+          created_at: string
+          id: string
+          metadata: Json | null
+          reason: string | null
+          target_id: string | null
+          target_label: string | null
+          target_type: string
+        }
+        Insert: {
+          action: string
+          admin_id: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          reason?: string | null
+          target_id?: string | null
+          target_label?: string | null
+          target_type: string
+        }
+        Update: {
+          action?: string
+          admin_id?: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          reason?: string | null
+          target_id?: string | null
+          target_label?: string | null
+          target_type?: string
+        }
+        Relationships: []
+      }
       author_applications: {
         Row: {
           admin_notes: string | null
@@ -774,6 +810,17 @@ export type Database = {
       }
       is_author: { Args: { _user_id: string }; Returns: boolean }
       is_verified_author: { Args: { _user_id: string }; Returns: boolean }
+      log_admin_action: {
+        Args: {
+          _action: string
+          _metadata?: Json
+          _reason?: string
+          _target_id?: string
+          _target_label?: string
+          _target_type: string
+        }
+        Returns: string
+      }
       moderate_chapter: {
         Args: {
           _chapter_id: string
@@ -796,6 +843,10 @@ export type Database = {
       submit_author_application: {
         Args: { _bio: string; _motivation: string; _portfolio_url?: string }
         Returns: string
+      }
+      submit_chapter_for_review: {
+        Args: { _chapter_id: string }
+        Returns: undefined
       }
       unlock_chapter: { Args: { _chapter_id: string }; Returns: number }
     }

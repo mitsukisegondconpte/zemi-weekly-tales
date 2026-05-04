@@ -42,6 +42,13 @@ const AdminWarnAuthorDialog = ({ open, onOpenChange, authorId, authorName, conte
         link: link ?? null,
       });
       if (error) throw error;
+      await supabase.rpc("log_admin_action", {
+        _action: "warn_author",
+        _target_type: "user",
+        _target_id: authorId,
+        _target_label: authorName ?? null,
+        _reason: message.trim(),
+      });
       toast.success(`Avètisman voye${authorName ? " bay " + authorName : ""}`);
       setMessage("");
       onSent?.();

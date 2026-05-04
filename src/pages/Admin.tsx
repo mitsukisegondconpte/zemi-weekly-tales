@@ -11,8 +11,9 @@ import "react-quill-new/dist/quill.snow.css";
 import AdminAuthorReview from "@/components/AdminAuthorReview";
 import AdminChapterModeration from "@/components/AdminChapterModeration";
 import AdminWarnAuthorDialog from "@/components/AdminWarnAuthorDialog";
+import AdminLogs from "@/components/AdminLogs";
 import { useAdminOverview } from "@/hooks/useExtra";
-import { Users, UserPlus, Hourglass, ShieldAlert, Bell, Ban } from "lucide-react";
+import { Users, UserPlus, Hourglass, ShieldAlert, Bell, Ban, ScrollText } from "lucide-react";
 
 const TABS = [
   { id: "overview", label: "Apèsi", icon: BarChart3 },
@@ -20,9 +21,9 @@ const TABS = [
   { id: "chapters", label: "Chapit", icon: FileText },
   { id: "authors", label: "Aplikasyon Otè", icon: UserCheck },
   { id: "moderation", label: "Moderasyon", icon: ShieldCheck },
+  { id: "logs", label: "Jounal", icon: ScrollText },
   { id: "codes", label: "Kòd Coins", icon: Key },
   { id: "comments", label: "Kòmantè", icon: MessageSquare },
-  { id: "stats", label: "Statistik", icon: BarChart3 },
 ];
 
 const ConfirmDialog = ({ title, message, onConfirm, onCancel, destructive = false, loading = false }: {
@@ -564,7 +565,15 @@ const Admin = () => {
                                   link: `/novel/${n.id}`,
                                 });
                               }
+                              await supabase.rpc("log_admin_action", {
+                                _action: "novel_disqualified",
+                                _target_type: "novel",
+                                _target_id: n.id,
+                                _target_label: n.title,
+                                _reason: "Diskalifye pa admin",
+                              });
                               queryClient.invalidateQueries({ queryKey: ["novels"] });
+                              queryClient.invalidateQueries({ queryKey: ["admin_logs"] });
                               toast.success("Novèl diskalifye");
                             },
                             true
@@ -863,23 +872,8 @@ const Admin = () => {
             </div>
           )}
 
-          {/* ========== STATS TAB ========== */}
-          {tab === "stats" && (
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
-              {[
-                { label: "Total Novèl", value: novels.length, icon: BookOpen },
-                { label: "Novèl Pibliye", value: novels.filter(n => n.status === "published").length, icon: Eye },
-                { label: "Total Reyaksyon", value: novels.reduce((s, n) => s + n.reactions, 0), icon: FileText },
-                { label: "Bouyon", value: novels.filter(n => n.status === "draft").length, icon: EyeOff },
-              ].map((s) => (
-                <div key={s.label} className="rounded-xl border border-border bg-card p-5 text-center">
-                  <s.icon className="h-6 w-6 text-primary mx-auto mb-2" />
-                  <p className="text-2xl md:text-3xl font-bold text-foreground">{s.value}</p>
-                  <p className="text-xs text-muted-foreground mt-1">{s.label}</p>
-                </div>
-              ))}
-            </div>
-          )}
+          {/* ========== LOGS TAB ========== */}
+          {tab === "logs" && <AdminLogs />}
         </div>
       </main>
       <Footer />

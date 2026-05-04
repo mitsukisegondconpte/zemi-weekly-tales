@@ -29,6 +29,7 @@ import { toast } from "sonner";
 
 const StatusBadge = ({ status }: { status: string }) => {
   const map: Record<string, { label: string; icon: typeof Clock; cls: string }> = {
+    draft: { label: "Bouyon", icon: FileText, cls: "bg-secondary text-muted-foreground border-border" },
     pending: { label: "Ap tann", icon: Clock, cls: "bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/30" },
     approved: { label: "Apwouve", icon: CheckCircle2, cls: "bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/30" },
     rejected: { label: "Refize", icon: XCircle, cls: "bg-destructive/10 text-destructive border-destructive/30" },
@@ -282,7 +283,19 @@ const AuthorDashboard = () => {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {chapters.map((c: any, i) => (
+                  {chapters.map((c: any, i) => {
+                    const displayStatus =
+                      c.status === "draft" && c.moderation_status !== "rejected"
+                        ? "draft"
+                        : (c.moderation_status ?? "pending");
+                    const canSubmit = displayStatus === "draft" || displayStatus === "rejected";
+                    const submit = async () => {
+                      const { error } = await supabase.rpc("submit_chapter_for_review", { _chapter_id: c.id });
+                      if (error) { toast.error(error.message); return; }
+                      toast.success("Voye pou moderasyon");
+                      queryClient.invalidateQueries({ queryKey: ["my_chapters"] });
+                    };
+                    return (
                     <div
                       key={c.id}
                       style={{ animationDelay: `${i * 30}ms` }}
@@ -293,20 +306,29 @@ const AuthorDashboard = () => {
                           Ch. {c.chapter_number}: {c.title}
                         </p>
                         <div className="flex items-center gap-2 mt-1 flex-wrap">
-                          <StatusBadge status={c.moderation_status ?? "pending"} />
+                          <StatusBadge status={displayStatus} />
                           {c.is_premium && (
                             <span className="text-[11px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-semibold">
                               {c.coin_price} coins
                             </span>
                           )}
                         </div>
-                        {c.moderation_status === "rejected" && c.rejection_reason && (
+                        {displayStatus === "rejected" && c.rejection_reason && (
                           <p className="text-[11px] text-destructive mt-1.5 break-words">
                             <strong>Rezon:</strong> {c.rejection_reason}
                           </p>
                         )}
                       </div>
                       <div className="flex items-center gap-1 shrink-0">
+                        {canSubmit && !isVerified && (
+                          <button
+                            onClick={submit}
+                            className="px-2.5 py-1.5 rounded-lg text-[11px] font-bold gradient-brand text-primary-foreground btn-tactile"
+                            title="Voye pou moderasyon"
+                          >
+                            Soumèt
+                          </button>
+                        )}
                         <button
                           onClick={() => openEditChapter(c)}
                           className="p-2 rounded-lg hover:bg-secondary text-muted-foreground btn-tactile"
@@ -323,7 +345,8 @@ const AuthorDashboard = () => {
                         </button>
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </section>

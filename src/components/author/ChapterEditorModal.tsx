@@ -148,32 +148,92 @@ const ChapterEditorModal = ({ open, onOpenChange, novelId, chapter, nextChapterN
     input.click();
   };
 
-  const handleSave = async () => {
-    if (!user) return;
-    if (!form.title.trim() || !form.content.trim()) {
-      toast.error("Tit ak kontni obligatwa");
-      return;
+  // Plain text length (strip HTML) for accurate counting
+  const plainLen = form.content.replace(/<[^>]+>/g, "").trim().length;
+  const MIN_LEN = 500;
+  const MAX_LEN = 50_000;
+  const TITLE_MAX = 100;
+
+  const persistChapter = async (submitForReview: boolean) => {
+    if (!user) return null;
+    if (!form.title.trim()) {
+      toast.error("Tit obligatwa");
+      return null;
     }
+    if (form.title.length > TITLE_MAX) {
+      toast.error(`Tit twò long (max ${TITLE_MAX} karaktè)`);
+      return null;
+    }
+    if (submitForReview) {
+      if (plainLen < MIN_LEN) {
+        toast.error(`Kontni twò kout (minimòm ${MIN_LEN} karaktè, w gen ${plainLen})`);
+        return null;
+      }
+      if (plainLen > MAX_LEN) {
+        toast.error(`Kontni twò long (maksimòm ${MAX_LEN} karaktè)`);
+        return null;
+      }
+    }
+
+    const payload: any = {
+      novel_id: novelId,
+      author_id: user.id,
+      title: form.title.trim(),
+      content: form.content,
+      chapter_number: form.chapter_number,
+      is_premium: form.is_premium,
+      coin_price: form.is_premium ? Math.max(0, form.coin_price) : 0,
+      status: "draft",
+    };
+
+    if (chapter?.id) {
+      const { error } = await supabase.from("chapters").update(payload).eq("id", chapter.id);
+      if (error) {
+        toast.error(error.message.includes("duplicate") ? "Yon chapit ak menm tit la egziste deja." : error.message);
+        return null;
+      }
+      return chapter.id as string;
+    }
+    const { data, error } = await supabase.from("chapters").insert(payload).select("id").single();
+    if (error) {
+      toast.error(error.message.includes("duplicate") ? "Yon chapit ak menm tit la egziste deja." : error.message);
+      return null;
+    }
+    return data.id as string;
+  };
+
+  const handleSaveDraft = async () => {
+    if (saving) return;
     setSaving(true);
     try {
-      const payload: any = {
-        novel_id: novelId,
-        author_id: user.id,
-        title: form.title.trim(),
-        content: form.content,
-        chapter_number: form.chapter_number,
-        is_premium: form.is_premium,
-        coin_price: form.is_premium ? Math.max(0, form.coin_price) : 0,
-        status: isVerified ? "published" : "draft",
-      };
-      if (chapter?.id) {
-        const { error } = await supabase.from("chapters").update(payload).eq("id", chapter.id);
-        if (error) { toast.error(error.message); return; }
-        toast.success("Chapit modifye!");
+      const id = await persistChapter(false);
+      if (id) {
+        toast.success("Bouyon sove!");
+        queryClient.invalidateQueries({ queryKey: ["my_chapters"] });
+        queryClient.invalidateQueries({ queryKey: ["chapters"] });
+        onOpenChange(false);
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSubmitForReview = async () => {
+    if (saving) return;
+    setSaving(true);
+    try {
+      const id = await persistChapter(true);
+      if (!id) return;
+      if (isVerified) {
+        await supabase.from("chapters").update({ status: "published" }).eq("id", id);
+        toast.success("Chapit pibliye!");
       } else {
-        const { error } = await supabase.from("chapters").insert(payload);
-        if (error) { toast.error(error.message); return; }
-        toast.success(isVerified ? "Chapit pibliye!" : "Chapit voye pou moderasyon.");
+        const { error } = await supabase.rpc("submit_chapter_for_review", { _chapter_id: id });
+        if (error) {
+          toast.error(error.message);
+          return;
+        }
+        toast.success("Chapit voye pou moderasyon.");
       }
       queryClient.invalidateQueries({ queryKey: ["my_chapters"] });
       queryClient.invalidateQueries({ queryKey: ["chapters"] });
@@ -203,13 +263,18 @@ const ChapterEditorModal = ({ open, onOpenChange, novelId, chapter, nextChapterN
         <div className="space-y-4 mt-2">
           <div className="grid grid-cols-3 gap-3">
             <div className="col-span-2 space-y-1.5">
-              <Label htmlFor="c-title" className="text-sm font-semibold">Tit *</Label>
+              <Label htmlFor="c-title" className="text-sm font-semibold flex items-center justify-between">
+                <span>Tit *</span>
+                <span className={`text-[10px] font-normal ${form.title.length > TITLE_MAX ? "text-destructive" : "text-muted-foreground"}`}>
+                  {form.title.length}/{TITLE_MAX}
+                </span>
+              </Label>
               <Input
                 id="c-title"
                 value={form.title}
                 onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
                 placeholder="Tit chapit la"
-                maxLength={140}
+                maxLength={TITLE_MAX}
               />
             </div>
             <div className="space-y-1.5">
@@ -244,7 +309,16 @@ const ChapterEditorModal = ({ open, onOpenChange, novelId, chapter, nextChapterN
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-sm font-semibold">Kontni *</Label>
+            <Label className="text-sm font-semibold flex items-center justify-between">
+              <span>Kontni *</span>
+              <span className={`text-[11px] font-normal ${
+                plainLen < MIN_LEN ? "text-orange-600" :
+                plainLen > MAX_LEN ? "text-destructive" : "text-muted-foreground"
+              }`}>
+                {plainLen.toLocaleString()} / {MAX_LEN.toLocaleString()} karaktè
+                {plainLen < MIN_LEN && ` (minimòm ${MIN_LEN})`}
+              </span>
+            </Label>
             <div className="rounded-lg border border-border overflow-hidden bg-background">
               <ReactQuill
                 ref={quillRef}
@@ -288,17 +362,25 @@ const ChapterEditorModal = ({ open, onOpenChange, novelId, chapter, nextChapterN
             )}
           </div>
 
-          <Button
-            onClick={handleSave}
-            disabled={saving}
-            className="w-full gradient-brand text-primary-foreground btn-tactile"
-          >
-            {saving ? (
-              <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Ap sove...</>
-            ) : (
-              chapter ? "Sove Modifikasyon" : "Sove Chapit"
-            )}
-          </Button>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <Button
+              onClick={handleSaveDraft}
+              disabled={saving}
+              variant="outline"
+              className="w-full btn-tactile"
+            >
+              {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+              Sove Bouyon
+            </Button>
+            <Button
+              onClick={handleSubmitForReview}
+              disabled={saving || plainLen < MIN_LEN || plainLen > MAX_LEN}
+              className="w-full gradient-brand text-primary-foreground btn-tactile"
+            >
+              {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+              {isVerified ? "Pibliye" : "Voye pou Moderasyon"}
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

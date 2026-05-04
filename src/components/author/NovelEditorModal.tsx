@@ -88,7 +88,7 @@ const NovelEditorModal = ({ open, onOpenChange, novel }: Props) => {
         if (cover_url) updateData.cover_url = cover_url;
         const { error } = await supabase.from("novels").update(updateData).eq("id", novel.id);
         if (error) {
-          toast.error(error.message);
+          toast.error(error.message.includes("duplicate") ? "Ou gen deja yon novèl ak menm tit la." : error.message);
           return;
         }
         toast.success("Novèl modifye!");
@@ -105,7 +105,7 @@ const NovelEditorModal = ({ open, onOpenChange, novel }: Props) => {
         if (cover_url) insertData.cover_url = cover_url;
         const { error } = await supabase.from("novels").insert(insertData);
         if (error) {
-          toast.error(error.message);
+          toast.error(error.message.includes("duplicate") ? "Ou gen deja yon novèl ak menm tit la." : error.message);
           return;
         }
         toast.success("Novèl kreye!");
@@ -135,13 +135,18 @@ const NovelEditorModal = ({ open, onOpenChange, novel }: Props) => {
 
         <div className="space-y-4 mt-2">
           <div className="space-y-1.5">
-            <Label htmlFor="n-title" className="text-sm font-semibold">Tit *</Label>
+            <Label htmlFor="n-title" className="text-sm font-semibold flex items-center justify-between">
+              <span>Tit *</span>
+              <span className={`text-[10px] font-normal ${form.title.length > 100 ? "text-destructive" : "text-muted-foreground"}`}>
+                {form.title.length}/100
+              </span>
+            </Label>
             <Input
               id="n-title"
               value={form.title}
               onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
               placeholder="Tit novèl la"
-              maxLength={120}
+              maxLength={100}
             />
           </div>
 
