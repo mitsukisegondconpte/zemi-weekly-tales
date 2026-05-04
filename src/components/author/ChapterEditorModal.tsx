@@ -362,17 +362,25 @@ const ChapterEditorModal = ({ open, onOpenChange, novelId, chapter, nextChapterN
             )}
           </div>
 
-          <Button
-            onClick={handleSave}
-            disabled={saving}
-            className="w-full gradient-brand text-primary-foreground btn-tactile"
-          >
-            {saving ? (
-              <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Ap sove...</>
-            ) : (
-              chapter ? "Sove Modifikasyon" : "Sove Chapit"
-            )}
-          </Button>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <Button
+              onClick={handleSaveDraft}
+              disabled={saving}
+              variant="outline"
+              className="w-full btn-tactile"
+            >
+              {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+              Sove Bouyon
+            </Button>
+            <Button
+              onClick={handleSubmitForReview}
+              disabled={saving || plainLen < MIN_LEN || plainLen > MAX_LEN}
+              className="w-full gradient-brand text-primary-foreground btn-tactile"
+            >
+              {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+              {isVerified ? "Pibliye" : "Voye pou Moderasyon"}
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
