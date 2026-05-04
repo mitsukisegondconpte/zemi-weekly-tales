@@ -29,6 +29,7 @@ import { toast } from "sonner";
 
 const StatusBadge = ({ status }: { status: string }) => {
   const map: Record<string, { label: string; icon: typeof Clock; cls: string }> = {
+    draft: { label: "Bouyon", icon: FileText, cls: "bg-secondary text-muted-foreground border-border" },
     pending: { label: "Ap tann", icon: Clock, cls: "bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/30" },
     approved: { label: "Apwouve", icon: CheckCircle2, cls: "bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/30" },
     rejected: { label: "Refize", icon: XCircle, cls: "bg-destructive/10 text-destructive border-destructive/30" },
