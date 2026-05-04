@@ -82,7 +82,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    try {
+      await supabase.auth.signOut();
+    } catch (err) {
+      console.error("[Auth] signOut error:", err);
+    } finally {
+      // Clear cached supabase tokens to avoid intermittent blank-page on next login
+      try {
+        Object.keys(localStorage)
+          .filter((k) => k.startsWith("sb-") || k.startsWith("supabase"))
+          .forEach((k) => localStorage.removeItem(k));
+      } catch {}
+      setUser(null);
+      setSession(null);
+      setProfile(null);
+      setIsAdmin(false);
+    }
   };
 
   const refreshProfile = async () => {
