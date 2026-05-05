@@ -355,14 +355,10 @@ const Admin = () => {
       if (error) { toast.error("Erè upload: " + error.message); return; }
       const { data } = supabase.storage.from("chapter-images").getPublicUrl(path);
       
-      // Insert into Quill editor at cursor position
-      const quill = quillRef.current?.getEditor?.();
-      if (quill) {
-        const range = quill.getSelection(true);
-        quill.insertEmbed(range.index, 'image', data.publicUrl);
-        quill.setSelection(range.index + 1);
+      // Insert into editor at cursor position
+      if (quillRef.current) {
+        quillRef.current.insertImage(data.publicUrl);
       } else {
-        // Fallback: append to content
         setChapterForm(p => ({ ...p, content: p.content + `<p><img src="${data.publicUrl}" /></p>` }));
       }
       toast.success("Imaj ajoute!");
