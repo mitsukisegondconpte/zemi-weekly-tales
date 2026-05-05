@@ -74,11 +74,8 @@ const ChapterEditorModal = ({ open, onOpenChange, novelId, chapter, nextChapterN
       const { error } = await supabase.storage.from("chapter-images").upload(path, file);
       if (error) { toast.error("Erè upload: " + error.message); return; }
       const { data } = supabase.storage.from("chapter-images").getPublicUrl(path);
-      const quill = quillRef.current?.getEditor?.();
-      if (quill) {
-        const range = quill.getSelection(true);
-        quill.insertEmbed(range.index, "image", data.publicUrl);
-        quill.setSelection(range.index + 1);
+      if (quillRef.current) {
+        quillRef.current.insertImage(data.publicUrl);
       } else {
         setForm((p) => ({ ...p, content: p.content + `<p><img src="${data.publicUrl}" /></p>` }));
       }
