@@ -653,14 +653,12 @@ const Admin = () => {
                       </div>
                     )}
                     <div className="border border-input rounded-xl overflow-hidden bg-background">
-                      <ReactQuill
+                      <RichTextEditor
                         ref={quillRef}
-                        theme="snow"
                         value={chapterForm.content}
                         onChange={(value) => setChapterForm(p => ({ ...p, content: value }))}
-                        modules={QUILL_MODULES}
                         placeholder="Ekri kontni chapit la isit... Itilize toolbar pou fòmate tèks la, ajoute imaj, elatriye."
-                        className="min-h-[300px]"
+                        minHeight={300}
                       />
                     </div>
                     <p className="text-[11px] text-muted-foreground mt-1">Tip: Itilize "Enpòte PDF" pou konvèti yon woman PDF an chapit otomatikman (tèks + imaj). Oswa "Ajoute Imaj" pou yon sèl imaj.</p>
