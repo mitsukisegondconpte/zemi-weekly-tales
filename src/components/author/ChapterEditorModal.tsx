@@ -10,8 +10,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Loader2, FileText, Image as ImageIcon, Upload } from "lucide-react";
 import { useIsVerifiedAuthor } from "@/hooks/useAuthor";
-import ReactQuill from "react-quill-new";
-import "react-quill-new/dist/quill.snow.css";
+import RichTextEditor, { type RichTextEditorHandle } from "@/components/RichTextEditor";
 
 interface Props {
   open: boolean;
@@ -21,25 +20,11 @@ interface Props {
   nextChapterNumber: number;
 }
 
-const QUILL_MODULES = {
-  toolbar: {
-    container: [
-      [{ header: [1, 2, 3, false] }],
-      ["bold", "italic", "underline", "strike"],
-      [{ list: "ordered" }, { list: "bullet" }],
-      ["blockquote"],
-      ["link", "image"],
-      [{ align: [] }],
-      ["clean"],
-    ],
-  },
-};
-
 const ChapterEditorModal = ({ open, onOpenChange, novelId, chapter, nextChapterNumber }: Props) => {
   const { user } = useAuth();
   const isVerified = useIsVerifiedAuthor();
   const queryClient = useQueryClient();
-  const quillRef = useRef<any>(null);
+  const quillRef = useRef<RichTextEditorHandle>(null);
   const [saving, setSaving] = useState(false);
   const [pdfImporting, setPdfImporting] = useState(false);
   const [pdfProgress, setPdfProgress] = useState("");
@@ -89,11 +74,8 @@ const ChapterEditorModal = ({ open, onOpenChange, novelId, chapter, nextChapterN
       const { error } = await supabase.storage.from("chapter-images").upload(path, file);
       if (error) { toast.error("Erè upload: " + error.message); return; }
       const { data } = supabase.storage.from("chapter-images").getPublicUrl(path);
-      const quill = quillRef.current?.getEditor?.();
-      if (quill) {
-        const range = quill.getSelection(true);
-        quill.insertEmbed(range.index, "image", data.publicUrl);
-        quill.setSelection(range.index + 1);
+      if (quillRef.current) {
+        quillRef.current.insertImage(data.publicUrl);
       } else {
         setForm((p) => ({ ...p, content: p.content + `<p><img src="${data.publicUrl}" /></p>` }));
       }
@@ -320,14 +302,12 @@ const ChapterEditorModal = ({ open, onOpenChange, novelId, chapter, nextChapterN
               </span>
             </Label>
             <div className="rounded-lg border border-border overflow-hidden bg-background">
-              <ReactQuill
+              <RichTextEditor
                 ref={quillRef}
-                theme="snow"
                 value={form.content}
                 onChange={(v) => setForm((f) => ({ ...f, content: v }))}
-                modules={QUILL_MODULES}
                 placeholder="Ekri chapit ou la..."
-                style={{ minHeight: 280 }}
+                minHeight={280}
               />
             </div>
           </div>

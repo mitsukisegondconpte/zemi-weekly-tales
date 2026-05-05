@@ -6,8 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAdminNovels, useAdminChapters, GENRES } from "@/hooks/useNovels";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import ReactQuill from "react-quill-new";
-import "react-quill-new/dist/quill.snow.css";
+import RichTextEditor, { type RichTextEditorHandle } from "@/components/RichTextEditor";
 import AdminAuthorReview from "@/components/AdminAuthorReview";
 import AdminChapterModeration from "@/components/AdminChapterModeration";
 import AdminWarnAuthorDialog from "@/components/AdminWarnAuthorDialog";
@@ -50,27 +49,13 @@ const ConfirmDialog = ({ title, message, onConfirm, onCancel, destructive = fals
   </div>
 );
 
-const QUILL_MODULES = {
-  toolbar: {
-    container: [
-      [{ header: [1, 2, 3, false] }],
-      ["bold", "italic", "underline", "strike"],
-      [{ list: "ordered" }, { list: "bullet" }],
-      ["blockquote"],
-      ["link", "image"],
-      [{ align: [] }],
-      ["clean"],
-    ],
-  },
-};
-
 const Admin = () => {
   const [tab, setTab] = useState("overview");
   const { data: overview } = useAdminOverview();
   const queryClient = useQueryClient();
   const [confirmAction, setConfirmAction] = useState<{ title: string; message: string; action: () => Promise<void>; destructive?: boolean } | null>(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
-  const quillRef = useRef<any>(null);
+  const quillRef = useRef<RichTextEditorHandle>(null);
   const [warnTarget, setWarnTarget] = useState<{ authorId: string; name?: string; context?: string; link?: string } | null>(null);
 
   const withConfirm = (title: string, message: string, action: () => Promise<void>, destructive = false) => {
@@ -370,14 +355,10 @@ const Admin = () => {
       if (error) { toast.error("Erè upload: " + error.message); return; }
       const { data } = supabase.storage.from("chapter-images").getPublicUrl(path);
       
-      // Insert into Quill editor at cursor position
-      const quill = quillRef.current?.getEditor?.();
-      if (quill) {
-        const range = quill.getSelection(true);
-        quill.insertEmbed(range.index, 'image', data.publicUrl);
-        quill.setSelection(range.index + 1);
+      // Insert into editor at cursor position
+      if (quillRef.current) {
+        quillRef.current.insertImage(data.publicUrl);
       } else {
-        // Fallback: append to content
         setChapterForm(p => ({ ...p, content: p.content + `<p><img src="${data.publicUrl}" /></p>` }));
       }
       toast.success("Imaj ajoute!");
@@ -672,14 +653,12 @@ const Admin = () => {
                       </div>
                     )}
                     <div className="border border-input rounded-xl overflow-hidden bg-background">
-                      <ReactQuill
+                      <RichTextEditor
                         ref={quillRef}
-                        theme="snow"
                         value={chapterForm.content}
                         onChange={(value) => setChapterForm(p => ({ ...p, content: value }))}
-                        modules={QUILL_MODULES}
                         placeholder="Ekri kontni chapit la isit... Itilize toolbar pou fòmate tèks la, ajoute imaj, elatriye."
-                        className="min-h-[300px]"
+                        minHeight={300}
                       />
                     </div>
                     <p className="text-[11px] text-muted-foreground mt-1">Tip: Itilize "Enpòte PDF" pou konvèti yon woman PDF an chapit otomatikman (tèks + imaj). Oswa "Ajoute Imaj" pou yon sèl imaj.</p>
