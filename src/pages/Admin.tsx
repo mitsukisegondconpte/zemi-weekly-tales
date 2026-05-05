@@ -55,7 +55,7 @@ const Admin = () => {
   const queryClient = useQueryClient();
   const [confirmAction, setConfirmAction] = useState<{ title: string; message: string; action: () => Promise<void>; destructive?: boolean } | null>(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
-  const quillRef = useRef<any>(null);
+  const quillRef = useRef<RichTextEditorHandle>(null);
   const [warnTarget, setWarnTarget] = useState<{ authorId: string; name?: string; context?: string; link?: string } | null>(null);
 
   const withConfirm = (title: string, message: string, action: () => Promise<void>, destructive = false) => {
