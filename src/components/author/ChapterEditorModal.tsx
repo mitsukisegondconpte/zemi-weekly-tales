@@ -10,8 +10,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Loader2, FileText, Image as ImageIcon, Upload } from "lucide-react";
 import { useIsVerifiedAuthor } from "@/hooks/useAuthor";
-import ReactQuill from "react-quill-new";
-import "react-quill-new/dist/quill.snow.css";
+import RichTextEditor, { type RichTextEditorHandle } from "@/components/RichTextEditor";
 
 interface Props {
   open: boolean;
