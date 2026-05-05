@@ -302,14 +302,12 @@ const ChapterEditorModal = ({ open, onOpenChange, novelId, chapter, nextChapterN
               </span>
             </Label>
             <div className="rounded-lg border border-border overflow-hidden bg-background">
-              <ReactQuill
+              <RichTextEditor
                 ref={quillRef}
-                theme="snow"
                 value={form.content}
                 onChange={(v) => setForm((f) => ({ ...f, content: v }))}
-                modules={QUILL_MODULES}
                 placeholder="Ekri chapit ou la..."
-                style={{ minHeight: 280 }}
+                minHeight={280}
               />
             </div>
           </div>
