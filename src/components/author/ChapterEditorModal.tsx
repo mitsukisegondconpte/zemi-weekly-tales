@@ -20,20 +20,6 @@ interface Props {
   nextChapterNumber: number;
 }
 
-const QUILL_MODULES = {
-  toolbar: {
-    container: [
-      [{ header: [1, 2, 3, false] }],
-      ["bold", "italic", "underline", "strike"],
-      [{ list: "ordered" }, { list: "bullet" }],
-      ["blockquote"],
-      ["link", "image"],
-      [{ align: [] }],
-      ["clean"],
-    ],
-  },
-};
-
 const ChapterEditorModal = ({ open, onOpenChange, novelId, chapter, nextChapterNumber }: Props) => {
   const { user } = useAuth();
   const isVerified = useIsVerifiedAuthor();
