@@ -9,18 +9,15 @@
   "background_color": "#0f0f1a",
   "theme_color": "#f97316",
   "lang": "ht",
+  "categories": ["books", "entertainment", "education"],
   "icons": [
-    {
-      "src": "/favicon.jpg",
-      "sizes": "192x192",
-      "type": "image/jpeg",
-      "purpose": "any"
-    },
-    {
-      "src": "/favicon.jpg",
-      "sizes": "512x512",
-      "type": "image/jpeg",
-      "purpose": "any"
-    }
+    { "src": "/favicon.jpg", "sizes": "192x192", "type": "image/jpeg", "purpose": "any" },
+    { "src": "/favicon.jpg", "sizes": "512x512", "type": "image/jpeg", "purpose": "any" },
+    { "src": "/favicon.jpg", "sizes": "512x512", "type": "image/jpeg", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Rechèch", "short_name": "Rechèch", "url": "/search", "icons": [{ "src": "/favicon.jpg", "sizes": "192x192" }] },
+    { "name": "Favori", "short_name": "Favori", "url": "/favorites", "icons": [{ "src": "/favicon.jpg", "sizes": "192x192" }] },
+    { "name": "Offline", "short_name": "Offline", "url": "/offline", "icons": [{ "src": "/favicon.jpg", "sizes": "192x192" }] }
   ]
 }
